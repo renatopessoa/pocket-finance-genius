@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -9,6 +8,10 @@ import { EducationHub } from '@/components/education/EducationHub';
 import { AIChat } from '@/components/ai-assistant/AIChat';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
+import { TransactionsPage } from '@/components/transactions/TransactionsPage';
+import { AccountsPage } from '@/components/accounts/AccountsPage';
+import { BudgetsPage } from '@/components/budgets/BudgetsPage';
+import { ReportsPage } from '@/components/reports/ReportsPage';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -40,41 +43,13 @@ const Index = () => {
           </div>
         );
       case 'transactions':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Transações</h2>
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border text-center">
-              <p className="text-gray-500">Funcionalidade de transações em desenvolvimento</p>
-            </div>
-          </div>
-        );
+        return <TransactionsPage />;
       case 'accounts':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Contas</h2>
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border text-center">
-              <p className="text-gray-500">Funcionalidade de contas em desenvolvimento</p>
-            </div>
-          </div>
-        );
+        return <AccountsPage />;
       case 'budgets':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Orçamentos</h2>
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border text-center">
-              <p className="text-gray-500">Funcionalidade de orçamentos em desenvolvimento</p>
-            </div>
-          </div>
-        );
+        return <BudgetsPage />;
       case 'reports':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Relatórios</h2>
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border text-center">
-              <p className="text-gray-500">Funcionalidade de relatórios em desenvolvimento</p>
-            </div>
-          </div>
-        );
+        return <ReportsPage />;
       case 'education':
         return <EducationHub />;
       case 'ai-assistant':
