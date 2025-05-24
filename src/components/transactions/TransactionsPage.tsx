@@ -59,6 +59,27 @@ export function TransactionsPage() {
   const getAccount = (accountId: string) => 
     mockAccounts.find(a => a.id === accountId);
 
+  // Filter valid categories and accounts for select options
+  const validCategories = mockCategories.filter(category => 
+    category && 
+    category.id && 
+    typeof category.id === 'string' && 
+    category.id.trim() !== '' &&
+    category.name &&
+    typeof category.name === 'string' &&
+    category.name.trim() !== ''
+  );
+
+  const validAccounts = mockAccounts.filter(account => 
+    account && 
+    account.id && 
+    typeof account.id === 'string' && 
+    account.id.trim() !== '' &&
+    account.name &&
+    typeof account.name === 'string' &&
+    account.name.trim() !== ''
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -109,7 +130,7 @@ export function TransactionsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as categorias</SelectItem>
-                {mockCategories.map(category => (
+                {validCategories.map(category => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
@@ -122,7 +143,7 @@ export function TransactionsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as contas</SelectItem>
-                {mockAccounts.map(account => (
+                {validAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.name}
                   </SelectItem>
@@ -166,22 +187,30 @@ export function TransactionsPage() {
                         {transaction.description}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: category?.color }}
-                          />
-                          <span>{category?.name}</span>
-                        </div>
+                        {category ? (
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: category.color }}
+                            />
+                            <span>{category.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Categoria não encontrada</span>
+                        )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: account?.color }}
-                          />
-                          <span>{account?.name}</span>
-                        </div>
+                        {account ? (
+                          <div className="flex items-center space-x-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: account.color }}
+                            />
+                            <span>{account.name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">Conta não encontrada</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>

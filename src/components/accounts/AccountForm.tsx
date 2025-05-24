@@ -56,7 +56,18 @@ export function AccountForm({ account, onSubmit, onCancel }: AccountFormProps) {
     onSubmit(accountData);
   };
 
-  console.log('Account types:', accountTypes);
+  // Filter account types to ensure they have valid values
+  const validAccountTypes = accountTypes.filter(type => 
+    type && 
+    type.value && 
+    typeof type.value === 'string' && 
+    type.value.trim() !== '' &&
+    type.label &&
+    typeof type.label === 'string' &&
+    type.label.trim() !== ''
+  );
+
+  console.log('Account types:', validAccountTypes);
   console.log('Form data type:', formData.type);
 
   return (
@@ -89,11 +100,17 @@ export function AccountForm({ account, onSubmit, onCancel }: AccountFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {accountTypes.filter(type => type.value && type.value.trim() !== '').map(type => (
-                <SelectItem key={type.value} value={type.value}>
-                  {type.label}
+              {validAccountTypes.length > 0 ? (
+                validAccountTypes.map(type => (
+                  <SelectItem key={type.value} value={type.value}>
+                    {type.label}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="checking" >
+                  Conta Corrente
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         </div>

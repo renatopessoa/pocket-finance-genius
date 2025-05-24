@@ -56,13 +56,28 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
     onSubmit(transactionData);
   };
 
-  const filteredCategories = mockCategories.filter(category => 
-    category.type === formData.type && category.id && category.id.trim() !== ''
-  );
+  // Filter and validate categories
+  const filteredCategories = mockCategories.filter(category => {
+    return category && 
+           category.type === formData.type && 
+           category.id && 
+           typeof category.id === 'string' && 
+           category.id.trim() !== '' &&
+           category.name &&
+           typeof category.name === 'string' &&
+           category.name.trim() !== '';
+  });
 
-  const validAccounts = mockAccounts.filter(account => 
-    account.id && account.id.trim() !== ''
-  );
+  // Filter and validate accounts
+  const validAccounts = mockAccounts.filter(account => {
+    return account && 
+           account.id && 
+           typeof account.id === 'string' && 
+           account.id.trim() !== '' &&
+           account.name &&
+           typeof account.name === 'string' &&
+           account.name.trim() !== '';
+  });
 
   console.log('Filtered categories:', filteredCategories);
   console.log('Valid accounts:', validAccounts);
@@ -156,17 +171,23 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
-                {validAccounts.map(account => (
-                  <SelectItem key={account.id} value={account.id}>
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: account.color }}
-                      />
-                      <span>{account.name}</span>
-                    </div>
+                {validAccounts.length > 0 ? (
+                  validAccounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: account.color || '#666' }}
+                        />
+                        <span>{account.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-accounts" disabled>
+                    Nenhuma conta disponível
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -182,17 +203,23 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
               <SelectValue placeholder="Selecione uma categoria" />
             </SelectTrigger>
             <SelectContent>
-              {filteredCategories.map(category => (
-                <SelectItem key={category.id} value={category.id}>
-                  <div className="flex items-center space-x-2">
-                    <div 
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: category.color }}
-                    />
-                    <span>{category.name}</span>
-                  </div>
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map(category => (
+                  <SelectItem key={category.id} value={category.id}>
+                    <div className="flex items-center space-x-2">
+                      <div 
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: category.color || '#666' }}
+                      />
+                      <span>{category.name}</span>
+                    </div>
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-categories" disabled>
+                  Nenhuma categoria disponível para este tipo
                 </SelectItem>
-              ))}
+              )}
             </SelectContent>
           </Select>
         </div>
