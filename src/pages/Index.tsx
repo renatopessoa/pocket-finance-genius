@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -12,6 +13,7 @@ import { TransactionsPage } from '@/components/transactions/TransactionsPage';
 import { AccountsPage } from '@/components/accounts/AccountsPage';
 import { BudgetsPage } from '@/components/budgets/BudgetsPage';
 import { ReportsPage } from '@/components/reports/ReportsPage';
+import { SettingsPage } from '@/components/settings/SettingsPage';
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -55,14 +57,7 @@ const Index = () => {
       case 'ai-assistant':
         return <AIChat />;
       case 'settings':
-        return (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Configurações</h2>
-            <div className="bg-white dark:bg-gray-800 p-8 rounded-lg border text-center">
-              <p className="text-gray-500">Funcionalidade de configurações em desenvolvimento</p>
-            </div>
-          </div>
-        );
+        return <SettingsPage />;
       default:
         return null;
     }
