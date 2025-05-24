@@ -305,14 +305,14 @@ export function ExpenseChart() {
               </div>
 
               {/* Animation Toggle */}
-              <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-3 py-2 border border-gray-200/50">
+              {/* <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-3 py-2 border border-gray-200/50">
                 <Zap className="h-3 w-3 text-yellow-500" />
                 <Switch
                   checked={isAnimated}
                   onCheckedChange={setIsAnimated}
                   className="scale-75"
                 />
-              </div>
+              </div> */}
             </div>
           </div>
 
