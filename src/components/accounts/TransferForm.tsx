@@ -40,14 +40,43 @@ export function TransferForm({ accounts, onSubmit, onCancel }: TransferFormProps
   const fromAccount = accounts.find(a => a.id === formData.fromAccountId);
   const availableBalance = fromAccount?.balance || 0;
 
-  // Filter accounts to ensure no empty IDs
-  const validAccounts = accounts.filter(account => 
-    account.id && account.id.trim() !== ''
-  );
+  // More comprehensive filtering to ensure valid accounts
+  const validAccounts = accounts.filter(account => {
+    // Check if account exists and has all required properties
+    if (!account) return false;
+    if (!account.id || typeof account.id !== 'string') return false;
+    if (account.id.trim() === '') return false;
+    if (!account.name || typeof account.name !== 'string') return false;
+    if (account.name.trim() === '') return false;
+    if (typeof account.balance !== 'number') return false;
+    if (!account.color || typeof account.color !== 'string') return false;
+    
+    return true;
+  });
 
+  console.log('Original accounts:', accounts);
   console.log('Valid accounts for transfer:', validAccounts);
   console.log('From account ID:', formData.fromAccountId);
   console.log('To account ID:', formData.toAccountId);
+
+  // If no valid accounts, show a message
+  if (validAccounts.length === 0) {
+    return (
+      <div>
+        <DialogHeader>
+          <DialogTitle>Transferir entre Contas</DialogTitle>
+        </DialogHeader>
+        <div className="p-4 text-center text-gray-500">
+          Nenhuma conta válida encontrada para transferência.
+        </div>
+        <div className="flex justify-end space-x-2 pt-4">
+          <Button type="button" variant="outline" onClick={onCancel}>
+            Fechar
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -66,25 +95,33 @@ export function TransferForm({ accounts, onSubmit, onCancel }: TransferFormProps
               <SelectValue placeholder="Selecione a conta de origem" />
             </SelectTrigger>
             <SelectContent>
-              {validAccounts.map(account => (
-                <SelectItem key={account.id} value={account.id}>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: account.color }}
-                      />
-                      <span>{account.name}</span>
+              {validAccounts.map(account => {
+                // Additional safety check before rendering
+                if (!account.id || account.id.trim() === '') {
+                  console.warn('Skipping account with invalid ID:', account);
+                  return null;
+                }
+                
+                return (
+                  <SelectItem key={account.id} value={account.id}>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: account.color }}
+                        />
+                        <span>{account.name}</span>
+                      </div>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {new Intl.NumberFormat('pt-BR', {
+                          style: 'currency',
+                          currency: 'BRL'
+                        }).format(account.balance)}
+                      </span>
                     </div>
-                    <span className="text-sm text-gray-500 ml-2">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                      }).format(account.balance)}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           {fromAccount && (
@@ -113,17 +150,25 @@ export function TransferForm({ accounts, onSubmit, onCancel }: TransferFormProps
             <SelectContent>
               {validAccounts
                 .filter(account => account.id !== formData.fromAccountId)
-                .map(account => (
-                  <SelectItem key={account.id} value={account.id}>
-                    <div className="flex items-center space-x-2">
-                      <div 
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: account.color }}
-                      />
-                      <span>{account.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
+                .map(account => {
+                  // Additional safety check before rendering
+                  if (!account.id || account.id.trim() === '') {
+                    console.warn('Skipping account with invalid ID:', account);
+                    return null;
+                  }
+                  
+                  return (
+                    <SelectItem key={account.id} value={account.id}>
+                      <div className="flex items-center space-x-2">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: account.color }}
+                        />
+                        <span>{account.name}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
             </SelectContent>
           </Select>
         </div>
