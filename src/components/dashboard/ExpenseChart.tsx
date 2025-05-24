@@ -550,12 +550,10 @@ export function ExpenseChart() {
 
                   {/* Enhanced center label */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="text-center bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg border border-gray-200/50">
+                    <div className="text-center">
                       <p className="text-xs text-gray-500 font-medium mb-1">Total Geral</p>
-                      <p className="text-lg font-bold text-gray-800">{formatCurrency(totalExpenses)}</p>
+                      <p className="text-xs font-bold text-gray-800">{formatCurrency(totalExpenses)}</p>
                       <div className="flex items-center justify-center gap-1 mt-1">
-                        <Star className="h-3 w-3 text-yellow-500 fill-current" />
-                        <span className="text-xs text-gray-500">Premium</span>
                       </div>
                     </div>
                   </div>
