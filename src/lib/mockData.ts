@@ -1,3 +1,4 @@
+
 import { User, Category, Transaction, Account } from '@/types/financial';
 
 export const mockUser: User = {
@@ -239,4 +240,71 @@ export const mockAccounts: Account[] = [
     color: '#F59E0B',
     icon: 'Wallet'
   }
+];
+
+export const mockEducationalContent = [
+  {
+    id: '1',
+    title: 'Como Montar uma Reserva de Emergência',
+    content: 'A reserva de emergência é essencial para sua segurança financeira. Aprenda como calcular o valor ideal e onde investir esse dinheiro para ter liquidez quando precisar.',
+    category: 'saving',
+    difficulty: 'beginner',
+    readTime: 5,
+  },
+  {
+    id: '2',
+    title: 'Primeiros Passos nos Investimentos',
+    content: 'Descubra os conceitos básicos de investimento, desde a poupança até o mercado de ações. Entenda o perfil de risco e como diversificar sua carteira.',
+    category: 'investing',
+    difficulty: 'beginner',
+    readTime: 8,
+  },
+  {
+    id: '3',
+    title: 'Planejamento de Orçamento Familiar',
+    content: 'Aprenda a organizar suas finanças familiares, definir prioridades de gastos e criar um orçamento que funcione para sua realidade.',
+    category: 'budgeting',
+    difficulty: 'beginner',
+    readTime: 6,
+  },
+  {
+    id: '4',
+    title: 'Estratégias para Quitar Dívidas',
+    content: 'Conheça diferentes métodos para sair do vermelho, como a estratégia da bola de neve e do avalanche. Aprenda a renegociar dívidas.',
+    category: 'debt',
+    difficulty: 'intermediate',
+    readTime: 10,
+  },
+  {
+    id: '5',
+    title: 'Investimentos em Renda Fixa',
+    content: 'Explore as opções de renda fixa disponíveis no mercado brasileiro, desde CDB até Tesouro Direto. Entenda rendimentos e tributação.',
+    category: 'investing',
+    difficulty: 'intermediate',
+    readTime: 12,
+  },
+  {
+    id: '6',
+    title: 'Como Economizar no Dia a Dia',
+    content: 'Dicas práticas para reduzir gastos sem perder qualidade de vida. Aprenda a identificar gastos supérfluos e criar hábitos de economia.',
+    category: 'saving',
+    difficulty: 'beginner',
+    readTime: 4,
+  },
+  {
+    id: '7',
+    title: 'Planejamento de Aposentadoria',
+    content: 'Nunca é cedo para pensar na aposentadoria. Descubra como calcular quanto você precisa poupar e as melhores estratégias de longo prazo.',
+    category: 'investing',
+    difficulty: 'advanced',
+    readTime: 15,
+  },
+  {
+    id: '8',
+    title: 'Controle de Gastos Variáveis',
+    content: 'Aprenda a controlar despesas que variam mês a mês, como alimentação, transporte e lazer. Estabeleça limites e monitore seus gastos.',
+    category: 'budgeting',
+    difficulty: 'intermediate',
+    readTime: 7,
+  },
 ];
