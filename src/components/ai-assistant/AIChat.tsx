@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,18 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Bot, User, Lightbulb } from 'lucide-react';
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+// Access environment variables properly in a browser context
+const openaiApiKey = typeof window !== 'undefined'
+  ? window.__NEXT_DATA__?.props?.pageProps?.openaiApiKey || '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'
+  : '';
+
+const openai = new OpenAI({
+  apiKey: openaiApiKey,
+  dangerouslyAllowBrowser: true // Note: For production, use server-side API calls instead
+});
 
 interface Message {
   id: string;
@@ -47,17 +58,60 @@ export function AIChat() {
     setInputMessage('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Get conversation history for context
+      const conversationHistory = messages.map(msg => ({
+        role: msg.isUser ? ('user' as const) : ('assistant' as const),
+        content: msg.content
+      }));
+
+      // Add current message
+      conversationHistory.push({
+        role: 'user' as const,
+        content: inputMessage
+      });
+
+      // Call OpenAI API
+      const response = await openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "Você é um assistente financeiro pessoal brasileiro. Forneça conselhos personalizados sobre finanças pessoais, orçamentos, economias e investimentos. Use linguagem amigável e exemplos práticos com valores em reais (R$). Seja conciso e direto."
+          },
+          ...conversationHistory
+        ],
+        temperature: 0.7,
+        max_tokens: 500
+      });
+
+      // Get AI response
+      const aiResponseContent = response.choices[0]?.message?.content ||
+        "Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.";
+
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        content: `Baseado na sua pergunta "${inputMessage}", analisei seus dados financeiros. Vejo que você gastou R$ 450 em alimentação este mês, o que está dentro do seu orçamento de R$ 800. Para economizar mais, sugiro: 1) Reduzir pedidos de delivery em 20%, 2) Fazer compras mensais no atacado, 3) Cozinhar mais em casa. Isso pode gerar uma economia de até R$ 150 por mês!`,
+        content: aiResponseContent,
         isUser: false,
         timestamp: new Date()
       };
+
       setMessages(prev => [...prev, aiResponse]);
+    } catch (error) {
+      console.error("Error calling OpenAI API:", error);
+
+      // Add error message
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        content: "Desculpe, ocorreu um erro ao processar sua solicitação. Por favor, tente novamente mais tarde.",
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleSuggestedQuestion = (question: string) => {
@@ -95,9 +149,8 @@ export function AIChat() {
                 {messages.map((message) => (
                   <div
                     key={message.id}
-                    className={`flex items-start space-x-3 ${
-                      message.isUser ? 'flex-row-reverse space-x-reverse' : ''
-                    }`}
+                    className={`flex items-start space-x-3 ${message.isUser ? 'flex-row-reverse space-x-reverse' : ''
+                      }`}
                   >
                     <Avatar className="h-8 w-8">
                       {message.isUser ? (
@@ -115,11 +168,10 @@ export function AIChat() {
                       )}
                     </Avatar>
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        message.isUser
-                          ? 'bg-blue-600 text-white ml-auto'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
-                      }`}
+                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isUser
+                        ? 'bg-blue-600 text-white ml-auto'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                        }`}
                     >
                       <p className="text-sm">{message.content}</p>
                     </div>
@@ -152,8 +204,8 @@ export function AIChat() {
                 onKeyPress={handleKeyPress}
                 className="flex-1"
               />
-              <Button 
-                onClick={handleSendMessage} 
+              <Button
+                onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isLoading}
                 className="bg-gradient-to-r from-blue-600 to-green-600 text-white"
               >
