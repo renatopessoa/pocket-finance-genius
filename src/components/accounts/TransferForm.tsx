@@ -40,6 +40,15 @@ export function TransferForm({ accounts, onSubmit, onCancel }: TransferFormProps
   const fromAccount = accounts.find(a => a.id === formData.fromAccountId);
   const availableBalance = fromAccount?.balance || 0;
 
+  // Filter accounts to ensure no empty IDs
+  const validAccounts = accounts.filter(account => 
+    account.id && account.id.trim() !== ''
+  );
+
+  console.log('Valid accounts for transfer:', validAccounts);
+  console.log('From account ID:', formData.fromAccountId);
+  console.log('To account ID:', formData.toAccountId);
+
   return (
     <div>
       <DialogHeader>
@@ -57,7 +66,7 @@ export function TransferForm({ accounts, onSubmit, onCancel }: TransferFormProps
               <SelectValue placeholder="Selecione a conta de origem" />
             </SelectTrigger>
             <SelectContent>
-              {accounts.map(account => (
+              {validAccounts.map(account => (
                 <SelectItem key={account.id} value={account.id}>
                   <div className="flex items-center justify-between w-full">
                     <div className="flex items-center space-x-2">
@@ -102,7 +111,7 @@ export function TransferForm({ accounts, onSubmit, onCancel }: TransferFormProps
               <SelectValue placeholder="Selecione a conta de destino" />
             </SelectTrigger>
             <SelectContent>
-              {accounts
+              {validAccounts
                 .filter(account => account.id !== formData.fromAccountId)
                 .map(account => (
                   <SelectItem key={account.id} value={account.id}>
