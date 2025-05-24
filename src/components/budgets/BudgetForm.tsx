@@ -60,6 +60,7 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
   // Filtrar apenas categorias de despesa que ainda não têm orçamento (exceto a que está sendo editada)
   const availableCategories = mockCategories.filter(category => {
     if (category.type !== 'expense') return false;
+    if (!category.id || category.id.trim() === '') return false;
     
     const hasExistingBudget = existingBudgets.some(b => 
       b.categoryId === category.id && 
@@ -70,6 +71,9 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
     
     return !hasExistingBudget;
   });
+
+  console.log('Available categories for budget:', availableCategories);
+  console.log('Current budget category ID:', budget?.categoryId);
 
   return (
     <div>
@@ -90,7 +94,7 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
               <SelectValue placeholder="Selecione uma categoria" />
             </SelectTrigger>
             <SelectContent>
-              {budget && (
+              {budget && budget.categoryId && (
                 <SelectItem value={budget.categoryId}>
                   <div className="flex items-center space-x-2">
                     <div 

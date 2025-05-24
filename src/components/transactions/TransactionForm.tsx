@@ -57,8 +57,15 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
   };
 
   const filteredCategories = mockCategories.filter(category => 
-    category.type === formData.type
+    category.type === formData.type && category.id && category.id.trim() !== ''
   );
+
+  const validAccounts = mockAccounts.filter(account => 
+    account.id && account.id.trim() !== ''
+  );
+
+  console.log('Filtered categories:', filteredCategories);
+  console.log('Valid accounts:', validAccounts);
 
   return (
     <div>
@@ -149,7 +156,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
                 <SelectValue placeholder="Selecione uma conta" />
               </SelectTrigger>
               <SelectContent>
-                {mockAccounts.map(account => (
+                {validAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     <div className="flex items-center space-x-2">
                       <div 

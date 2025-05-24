@@ -56,6 +56,9 @@ export function AccountForm({ account, onSubmit, onCancel }: AccountFormProps) {
     onSubmit(accountData);
   };
 
+  console.log('Account types:', accountTypes);
+  console.log('Form data type:', formData.type);
+
   return (
     <div>
       <DialogHeader>
@@ -86,7 +89,7 @@ export function AccountForm({ account, onSubmit, onCancel }: AccountFormProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {accountTypes.map(type => (
+              {accountTypes.filter(type => type.value && type.value.trim() !== '').map(type => (
                 <SelectItem key={type.value} value={type.value}>
                   {type.label}
                 </SelectItem>
