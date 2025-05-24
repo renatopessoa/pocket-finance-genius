@@ -1,13 +1,12 @@
-
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { 
-  LayoutDashboard, 
-  ArrowUpDown, 
-  Target, 
-  CreditCard, 
-  PieChart, 
-  BookOpen, 
+import {
+  LayoutDashboard,
+  ArrowUpDown,
+  Target,
+  CreditCard,
+  PieChart,
+  BookOpen,
   MessageCircle,
   Settings
 } from 'lucide-react';
@@ -32,8 +31,8 @@ const menuItems = [
 export function Sidebar({ activeTab, onTabChange, isCollapsed }: SidebarProps) {
   return (
     <div className={cn(
-      "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300",
-      isCollapsed ? "w-16" : "w-64"
+      "bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 h-screen group",
+      "w-16 hover:w-64"
     )}>
       <nav className="p-4 space-y-2">
         {menuItems.map((item) => {
@@ -44,13 +43,15 @@ export function Sidebar({ activeTab, onTabChange, isCollapsed }: SidebarProps) {
               variant={activeTab === item.id ? "default" : "ghost"}
               className={cn(
                 "w-full justify-start transition-all duration-200",
-                isCollapsed && "px-2",
+                "px-2 group-hover:px-4",
                 activeTab === item.id && "bg-gradient-to-r from-blue-600 to-green-600 text-white"
               )}
               onClick={() => onTabChange(item.id)}
             >
-              <Icon className={cn("h-4 w-4", !isCollapsed && "mr-3")} />
-              {!isCollapsed && <span>{item.label}</span>}
+              <Icon className={cn("h-4 w-4 group-hover:mr-3")} />
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap overflow-hidden">
+                {item.label}
+              </span>
             </Button>
           );
         })}
