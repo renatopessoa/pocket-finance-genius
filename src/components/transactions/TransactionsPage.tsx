@@ -16,17 +16,17 @@ import { ptBR } from 'date-fns/locale';
 export function TransactionsPage() {
   const [transactions, setTransactions] = useState(mockTransactions);
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
-  const [accountFilter, setAccountFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('all');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !typeFilter || transaction.type === typeFilter;
-    const matchesCategory = !categoryFilter || transaction.categoryId === categoryFilter;
-    const matchesAccount = !accountFilter || transaction.accountId === accountFilter;
+    const matchesType = typeFilter === 'all' || transaction.type === typeFilter;
+    const matchesCategory = categoryFilter === 'all' || transaction.categoryId === categoryFilter;
+    const matchesAccount = accountFilter === 'all' || transaction.accountId === accountFilter;
     
     return matchesSearch && matchesType && matchesCategory && matchesAccount;
   });
@@ -98,7 +98,7 @@ export function TransactionsPage() {
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos os tipos</SelectItem>
+                <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="income">Receita</SelectItem>
                 <SelectItem value="expense">Despesa</SelectItem>
               </SelectContent>
@@ -108,7 +108,7 @@ export function TransactionsPage() {
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as categorias</SelectItem>
+                <SelectItem value="all">Todas as categorias</SelectItem>
                 {mockCategories.map(category => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name}
@@ -121,7 +121,7 @@ export function TransactionsPage() {
                 <SelectValue placeholder="Conta" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas as contas</SelectItem>
+                <SelectItem value="all">Todas as contas</SelectItem>
                 {mockAccounts.map(account => (
                   <SelectItem key={account.id} value={account.id}>
                     {account.name}
