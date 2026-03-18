@@ -2,13 +2,21 @@ import express from 'express';
 import cors from 'cors';
 import pkg from 'pg';
 import bcrypt from 'bcryptjs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 const { Pool } = pkg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// ── Serve frontend estático (build do Vite) ──
+app.use(express.static(path.join(__dirname, 'dist')));
 
 const pool = new Pool({
     connectionString: 'postgres://postgres:xurOtXYuNOXzV1hVUIEWVfaK1qzLY4I89Q5LEmvemJnFakbFk1GVh1q1pIeynMIE@72.62.137.175:5432/postgres',
@@ -444,6 +452,11 @@ app.get('/api/educational-content', async (req, res) => {
         console.error(err);
         res.status(500).json({ error: 'Erro ao buscar conteúdo educacional' });
     }
+});
+
+// ── SPA catch-all: qualquer rota que não seja /api cai no index.html ──
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(port, '0.0.0.0', () => {
