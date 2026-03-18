@@ -5,17 +5,32 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, FileText, FileSpreadsheet, TrendingUp, TrendingDown } from 'lucide-react';
+import { CalendarIcon, FileText, FileSpreadsheet, TrendingUp, TrendingDown, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useCurrentUser, useTransactions, useCategories, useAccounts } from '@/hooks/use-api';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, Legend,
+} from 'recharts';
+
+const fmt = (v: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+function EmptyChart({ label }: { label: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-[300px] text-gray-400 space-y-2">
+      <BarChart2 className="h-10 w-10 opacity-30" />
+      <p className="text-sm">Nenhuma {label} no período</p>
+    </div>
+  );
+}
 
 export function ReportsPage() {
   const [reportType, setReportType] = useState('monthly');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedAccount, setSelectedAccount] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedAccount, setSelectedAccount] = useState('all');
 
   const { data: currentUser } = useCurrentUser();
   const userId = currentUser?.id;
@@ -24,24 +39,21 @@ export function ReportsPage() {
   const { data: accounts = [] } = useAccounts(userId);
 
   const { start, end } = useMemo(() => {
-    switch (reportType) {
-      case 'yearly':
-        return { start: startOfYear(selectedDate), end: endOfYear(selectedDate) };
-      default:
-        return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
+    if (reportType === 'yearly') {
+      return { start: startOfYear(selectedDate), end: endOfYear(selectedDate) };
     }
+    return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
   }, [reportType, selectedDate]);
 
-  const transactions = allTransactions;
-
-  const filteredTransactions = transactions.filter(transaction => {
-    const transactionDate = transaction.date;
-    const isInDateRange = transactionDate >= start && transactionDate <= end;
-    const matchesCategory = !selectedCategory || transaction.categoryId === selectedCategory;
-    const matchesAccount = !selectedAccount || transaction.accountId === selectedAccount;
-
-    return isInDateRange && matchesCategory && matchesAccount;
-  });
+  const filteredTransactions = useMemo(() =>
+    allTransactions.filter(t => {
+      const d = t.date instanceof Date ? t.date : new Date(t.date);
+      return d >= start && d <= end
+        && (selectedCategory === 'all' || t.categoryId === selectedCategory)
+        && (selectedAccount === 'all' || t.accountId === selectedAccount);
+    }),
+    [allTransactions, start, end, selectedCategory, selectedAccount]
+  );
 
   const totalIncome = filteredTransactions
     .filter(t => t.type === 'income')
@@ -53,79 +65,62 @@ export function ReportsPage() {
 
   const balance = totalIncome - totalExpenses;
 
-  // Dados para gráficos
   const expensesByCategory = categories
     .filter(c => c.type === 'expense')
-    .map(category => {
-      const amount = filteredTransactions
-        .filter(t => t.type === 'expense' && t.categoryId === category.id)
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      return {
-        name: category.name,
-        value: amount,
-        color: category.color
-      };
-    })
-    .filter(item => item.value > 0);
+    .map(c => ({
+      name: c.name,
+      value: filteredTransactions
+        .filter(t => t.type === 'expense' && t.categoryId === c.id)
+        .reduce((sum, t) => sum + t.amount, 0),
+      color: c.color,
+    }))
+    .filter(x => x.value > 0);
 
   const incomeByCategory = categories
     .filter(c => c.type === 'income')
-    .map(category => {
-      const amount = filteredTransactions
-        .filter(t => t.type === 'income' && t.categoryId === category.id)
-        .reduce((sum, t) => sum + t.amount, 0);
+    .map(c => ({
+      name: c.name,
+      value: filteredTransactions
+        .filter(t => t.type === 'income' && t.categoryId === c.id)
+        .reduce((sum, t) => sum + t.amount, 0),
+      color: c.color,
+    }))
+    .filter(x => x.value > 0);
 
-      return {
-        name: category.name,
-        value: amount,
-        color: category.color
-      };
-    })
-    .filter(item => item.value > 0);
-
-  // Evolução mensal (se for relatório anual)
-  const monthlyEvolution = reportType === 'yearly' ?
-    Array.from({ length: 12 }, (_, i) => {
-      const month = i + 1;
-      const monthTransactions = transactions.filter(t =>
-        t.date.getMonth() + 1 === month &&
-        t.date.getFullYear() === selectedDate.getFullYear()
-      );
-
-      const income = monthTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      const expenses = monthTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
-
-      return {
-        month: new Date(2024, i).toLocaleDateString('pt-BR', { month: 'short' }),
-        receitas: income,
-        despesas: expenses,
-        saldo: income - expenses
-      };
-    }) : [];
+  const monthlyEvolution = useMemo(() =>
+    reportType === 'yearly'
+      ? Array.from({ length: 12 }, (_, i) => {
+          const monthTxs = allTransactions.filter(t => {
+            const d = t.date instanceof Date ? t.date : new Date(t.date);
+            return d.getMonth() === i && d.getFullYear() === selectedDate.getFullYear();
+          });
+          const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+          const expenses = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+          return {
+            month: new Date(selectedDate.getFullYear(), i).toLocaleDateString('pt-BR', { month: 'short' }),
+            Receitas: income,
+            Despesas: expenses,
+            Saldo: income - expenses,
+          };
+        })
+      : [],
+    [reportType, allTransactions, selectedDate]
+  );
 
   const exportToPDF = () => {
-    // Implementação básica - em um app real, usaria uma biblioteca como jsPDF
-    const content = `
-      RELATÓRIO FINANCEIRO
-      Período: ${format(start, 'dd/MM/yyyy', { locale: ptBR })} - ${format(end, 'dd/MM/yyyy', { locale: ptBR })}
-      
-      RESUMO:
-      Total de Receitas: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalIncome)}
-      Total de Despesas: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalExpenses)}
-      Saldo: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
-      
-      TRANSAÇÕES:
-      ${filteredTransactions.map(t =>
-      `${format(t.date, 'dd/MM/yyyy')} - ${t.description} - ${t.type === 'income' ? '+' : '-'}${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.amount)}`
-    ).join('\n')}
-    `;
+    const content = `RELATÓRIO FINANCEIRO — Meu Financeiro
+Período: ${format(start, 'dd/MM/yyyy', { locale: ptBR })} - ${format(end, 'dd/MM/yyyy', { locale: ptBR })}
 
+RESUMO:
+Total de Receitas: ${fmt(totalIncome)}
+Total de Despesas: ${fmt(totalExpenses)}
+Saldo: ${fmt(balance)}
+
+TRANSAÇÕES:
+${filteredTransactions.map(t => {
+  const d = t.date instanceof Date ? t.date : new Date(t.date);
+  return `${format(d, 'dd/MM/yyyy')} - ${t.description} - ${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}`;
+}).join('\n')}`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -140,24 +135,18 @@ export function ReportsPage() {
   const exportToCSV = () => {
     const headers = ['Data', 'Descrição', 'Categoria', 'Conta', 'Tipo', 'Valor'];
     const rows = filteredTransactions.map(t => {
-      const category = categories.find(c => c.id === t.categoryId)?.name || '';
-      const account = accounts.find(a => a.id === t.accountId)?.name || '';
-
+      const d = t.date instanceof Date ? t.date : new Date(t.date);
       return [
-        format(t.date, 'dd/MM/yyyy'),
+        format(d, 'dd/MM/yyyy'),
         t.description,
-        category,
-        account,
+        categories.find(c => c.id === t.categoryId)?.name || '',
+        accounts.find(a => a.id === t.accountId)?.name || '',
         t.type === 'income' ? 'Receita' : 'Despesa',
-        t.amount.toString()
+        t.amount.toString(),
       ];
     });
-
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csv = [headers, ...rows].map(r => r.map(f => `"${f}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -170,12 +159,13 @@ export function ReportsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Relatórios e Histórico</h2>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={exportToPDF}>
             <FileText className="h-4 w-4 mr-2" />
-            Exportar PDF
+            Exportar TXT
           </Button>
           <Button variant="outline" onClick={exportToCSV}>
             <FileSpreadsheet className="h-4 w-4 mr-2" />
@@ -188,72 +178,51 @@ export function ReportsPage() {
       <Card>
         <CardContent className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <Select value={reportType} onValueChange={setReportType}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="monthly">Relatório Mensal</SelectItem>
-                  <SelectItem value="yearly">Relatório Anual</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={reportType} onValueChange={setReportType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="monthly">Relatório Mensal</SelectItem>
+                <SelectItem value="yearly">Relatório Anual</SelectItem>
+              </SelectContent>
+            </Select>
 
-            <div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {selectedDate ? format(selectedDate, reportType === 'monthly' ? 'MMM yyyy' : 'yyyy', { locale: ptBR }) : "Selecione"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => setSelectedDate(date || new Date())}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(selectedDate, reportType === 'monthly' ? 'MMM yyyy' : 'yyyy', { locale: ptBR })}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => setSelectedDate(date || new Date())}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
 
-            <div>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as categorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas as categorias</SelectItem>
-                  {categories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger><SelectValue placeholder="Todas as categorias" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias</SelectItem>
+                {categories.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            <div>
-              <Select value={selectedAccount} onValueChange={setSelectedAccount}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as contas" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Todas as contas</SelectItem>
-                  {accounts.map(account => (
-                    <SelectItem key={account.id} value={account.id}>
-                      {account.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+              <SelectTrigger><SelectValue placeholder="Todas as contas" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as contas</SelectItem>
+                {accounts.map(a => (
+                  <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -268,12 +237,10 @@ export function ReportsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }).format(totalIncome)}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{fmt(totalIncome)}</div>
+            <p className="text-xs text-gray-400 mt-1">
+              {filteredTransactions.filter(t => t.type === 'income').length} transações
+            </p>
           </CardContent>
         </Card>
 
@@ -285,12 +252,10 @@ export function ReportsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }).format(totalExpenses)}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{fmt(totalExpenses)}</div>
+            <p className="text-xs text-gray-400 mt-1">
+              {filteredTransactions.filter(t => t.type === 'expense').length} transações
+            </p>
           </CardContent>
         </Card>
 
@@ -300,11 +265,9 @@ export function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-              {new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-              }).format(balance)}
+              {fmt(balance)}
             </div>
+            <p className="text-xs text-gray-400 mt-1">{filteredTransactions.length} transações no total</p>
           </CardContent>
         </Card>
       </div>
@@ -312,85 +275,85 @@ export function ReportsPage() {
       {/* Gráficos */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Despesas por Categoria */}
-        {expensesByCategory.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Despesas por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4 text-red-500" />
+              Despesas por Categoria
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {expensesByCategory.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={expensesByCategory}
                     cx="50%"
                     cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
+                    outerRadius={90}
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    labelLine={false}
                   >
                     {expensesByCategory.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) =>
-                    new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(Number(value))
-                  } />
+                  <Tooltip formatter={(value) => fmt(Number(value))} />
                 </PieChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <EmptyChart label="despesa" />
+            )}
+          </CardContent>
+        </Card>
 
         {/* Receitas por Categoria */}
-        {incomeByCategory.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Receitas por Categoria</CardTitle>
-            </CardHeader>
-            <CardContent>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart2 className="h-4 w-4 text-green-500" />
+              Receitas por Categoria
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {incomeByCategory.length > 0 ? (
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={incomeByCategory}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip formatter={(value) =>
-                    new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(Number(value))
-                  } />
-                  <Bar dataKey="value" fill="#10B981" />
+                  <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => fmt(Number(value))} />
+                  <Bar dataKey="value" name="Valor" radius={[4, 4, 0, 0]}>
+                    {incomeByCategory.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+            ) : (
+              <EmptyChart label="receita" />
+            )}
+          </CardContent>
+        </Card>
 
-        {/* Evolução Mensal (apenas para relatório anual) */}
+        {/* Evolução Mensal — apenas relatório anual */}
         {reportType === 'yearly' && (
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Evolução Mensal - {selectedDate.getFullYear()}</CardTitle>
+              <CardTitle>Evolução Mensal — {selectedDate.getFullYear()}</CardTitle>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={monthlyEvolution}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip formatter={(value) =>
-                    new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(Number(value))
-                  } />
-                  <Line type="monotone" dataKey="receitas" stroke="#10B981" name="Receitas" />
-                  <Line type="monotone" dataKey="despesas" stroke="#EF4444" name="Despesas" />
-                  <Line type="monotone" dataKey="saldo" stroke="#3B82F6" name="Saldo" />
+                  <YAxis tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip formatter={(value) => fmt(Number(value))} />
+                  <Legend />
+                  <Line type="monotone" dataKey="Receitas" stroke="#10B981" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Despesas" stroke="#EF4444" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="Saldo" stroke="#3B82F6" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
@@ -398,51 +361,57 @@ export function ReportsPage() {
         )}
       </div>
 
-      {/* Resumo de Transações */}
+      {/* Histórico de Transações */}
       <Card>
         <CardHeader>
           <CardTitle>
-            Histórico de Transações ({filteredTransactions.length} {filteredTransactions.length === 1 ? 'transação' : 'transações'})
+            Histórico de Transações ({filteredTransactions.length}{' '}
+            {filteredTransactions.length === 1 ? 'transação' : 'transações'})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {filteredTransactions.map((transaction) => {
-              const category = categories.find(c => c.id === transaction.categoryId);
-              const account = accounts.find(a => a.id === transaction.accountId);
-
-              return (
-                <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg border">
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center"
-                      style={{ backgroundColor: category?.color + '20' }}
-                    >
-                      <span className="text-xs font-medium" style={{ color: category?.color }}>
-                        {category?.name.charAt(0)}
-                      </span>
+          {filteredTransactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400 space-y-2">
+              <FileText className="h-10 w-10 opacity-30" />
+              <p className="text-sm">Nenhuma transação encontrada para este período</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-96 overflow-y-auto">
+              {filteredTransactions.map((transaction) => {
+                const category = categories.find(c => c.id === transaction.categoryId);
+                const account = accounts.find(a => a.id === transaction.accountId);
+                const txDate = transaction.date instanceof Date ? transaction.date : new Date(transaction.date);
+                return (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+                        style={{ backgroundColor: (category?.color || '#6B7280') + '25' }}
+                      >
+                        <span className="text-xs font-bold" style={{ color: category?.color || '#6B7280' }}>
+                          {category?.name?.charAt(0) || '?'}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900 dark:text-white">{transaction.description}</p>
+                        <p className="text-xs text-gray-500">
+                          {format(txDate, 'dd/MM/yyyy', { locale: ptBR })}
+                          {category && ` • ${category.name}`}
+                          {account && ` • ${account.name}`}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium">{transaction.description}</p>
-                      <p className="text-sm text-gray-500">
-                        {format(transaction.date, 'dd/MM/yyyy', { locale: ptBR })} • {category?.name} • {account?.name}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                      {transaction.type === 'income' ? '+' : '-'}
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: 'BRL'
-                      }).format(transaction.amount)}
+                    <p className={`font-semibold text-sm ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                      {transaction.type === 'income' ? '+' : '-'}{fmt(transaction.amount)}
                     </p>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

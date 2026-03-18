@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, Component, ReactNode } from 'react';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { StatsCards } from '@/components/dashboard/StatsCards';
@@ -8,12 +8,30 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { EducationHub } from '@/components/education/EducationHub';
 import { AIChat } from '@/components/ai-assistant/AIChat';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, AlertTriangle } from 'lucide-react';
 import { TransactionsPage } from '@/components/transactions/TransactionsPage';
 import { AccountsPage } from '@/components/accounts/AccountsPage';
 import { BudgetsPage } from '@/components/budgets/BudgetsPage';
 import { ReportsPage } from '@/components/reports/ReportsPage';
 import { SettingsPage } from '@/components/settings/SettingsPage';
+
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
+  constructor(props: any) { super(props); this.state = { error: null }; }
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 text-center p-8">
+          <AlertTriangle className="h-12 w-12 text-red-400" />
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Ocorreu um erro nesta página</h2>
+          <pre className="text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded p-4 max-w-xl overflow-auto text-left">{this.state.error.message}</pre>
+          <Button onClick={() => this.setState({ error: null })}>Tentar novamente</Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -105,7 +123,9 @@ const Index = () => {
           <Header onThemeToggle={toggleTheme} isDarkMode={isDarkMode} />
           
           <main className="flex-1 p-6">
-            {renderContent()}
+            <ErrorBoundary key={activeTab}>
+              {renderContent()}
+            </ErrorBoundary>
           </main>
         </div>
       </div>
