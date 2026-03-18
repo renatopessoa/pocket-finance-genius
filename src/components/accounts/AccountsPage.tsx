@@ -12,11 +12,13 @@ import {
   useCurrentUser, useAccounts, useTransactions,
   useCreateAccount, useUpdateAccount, useDeleteAccount, useTransferFunds,
 } from '@/hooks/use-api';
+import { useToast } from '@/components/ui/use-toast';
 
 export function AccountsPage() {
   const [editingAccount, setEditingAccount] = useState<any>(null);
   const [isAccountFormOpen, setIsAccountFormOpen] = useState(false);
   const [isTransferFormOpen, setIsTransferFormOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: currentUser } = useCurrentUser();
   const userId = currentUser?.id;
@@ -48,20 +50,33 @@ export function AccountsPage() {
   };
 
   const handleAddAccount = (data: any) =>
-    createAccount.mutate(data, { onSuccess: () => setIsAccountFormOpen(false) });
+    createAccount.mutate(data, {
+      onSuccess: () => { toast({ title: 'Sucesso!', description: 'Conta criada.' }); setIsAccountFormOpen(false); },
+      onError: (err) => { console.error(err); toast({ title: 'Erro ao criar conta', description: 'Verifique os dados e tente novamente.', variant: 'destructive' }); },
+    });
 
   const handleEditAccount = (data: any) =>
     updateAccount.mutate(
       { id: editingAccount.id, ...data },
-      { onSuccess: () => { setEditingAccount(null); setIsAccountFormOpen(false); } }
+      {
+        onSuccess: () => { toast({ title: 'Sucesso!', description: 'Conta atualizada.' }); setEditingAccount(null); setIsAccountFormOpen(false); },
+        onError: (err) => { console.error(err); toast({ title: 'Erro ao atualizar conta', description: 'Tente novamente.', variant: 'destructive' }); },
+      }
     );
 
-  const handleDeleteAccount = (id: string) => deleteAccount.mutate(id);
+  const handleDeleteAccount = (id: string) =>
+    deleteAccount.mutate(id, {
+      onSuccess: () => toast({ title: 'Conta excluída.' }),
+      onError: (err) => { console.error(err); toast({ title: 'Erro ao excluir conta', variant: 'destructive' }); },
+    });
 
   const handleTransfer = (data: any) =>
     transferFunds.mutate(
       { fromAccountId: data.fromAccountId, toAccountId: data.toAccountId, amount: data.amount },
-      { onSuccess: () => setIsTransferFormOpen(false) }
+      {
+        onSuccess: () => { toast({ title: 'Transferência realizada!' }); setIsTransferFormOpen(false); },
+        onError: (err) => { console.error(err); toast({ title: 'Erro na transferência', variant: 'destructive' }); },
+      }
     );
 
   const totalBalance = accounts.reduce((sum, a) => sum + a.balance, 0);

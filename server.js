@@ -13,8 +13,40 @@ const pool = new Pool({
     connectionString: 'postgres://postgres:xurOtXYuNOXzV1hVUIEWVfaK1qzLY4I89Q5LEmvemJnFakbFk1GVh1q1pIeynMIE@72.62.137.175:5432/postgres',
 });
 
+// ── Seed: categorias padrão ──
+async function seedCategories() {
+    const { rows } = await pool.query('SELECT COUNT(*)::int AS cnt FROM pfg_categories');
+    if (rows[0].cnt > 0) return;
+    const cats = [
+        // Despesas
+        ['Alimentação', 'Utensils', '#EF4444', 'expense'],
+        ['Transporte', 'Car', '#F59E0B', 'expense'],
+        ['Moradia', 'Home', '#8B5CF6', 'expense'],
+        ['Saúde', 'Heart', '#EC4899', 'expense'],
+        ['Educação', 'GraduationCap', '#3B82F6', 'expense'],
+        ['Lazer', 'Gamepad2', '#10B981', 'expense'],
+        ['Roupas', 'Shirt', '#06B6D4', 'expense'],
+        ['Assinaturas', 'Tv', '#6366F1', 'expense'],
+        ['Outros', 'MoreHorizontal', '#6B7280', 'expense'],
+        // Receitas
+        ['Salário', 'Banknote', '#22C55E', 'income'],
+        ['Freelance', 'Laptop', '#14B8A6', 'income'],
+        ['Investimentos', 'TrendingUp', '#0EA5E9', 'income'],
+        ['Outros', 'MoreHorizontal', '#A3A3A3', 'income'],
+    ];
+    const values = cats.map((_, i) => `($${i * 4 + 1},$${i * 4 + 2},$${i * 4 + 3},$${i * 4 + 4})`).join(',');
+    await pool.query(
+        `INSERT INTO pfg_categories (name, icon, color, type) VALUES ${values}`,
+        cats.flat()
+    );
+    console.log(`Seed: ${cats.length} categorias inseridas.`);
+}
+
 pool.connect()
-    .then(() => console.log('Conectado ao PostgreSQL com sucesso!'))
+    .then(async () => {
+        console.log('Conectado ao PostgreSQL com sucesso!');
+        await seedCategories();
+    })
     .catch(err => console.error('Erro ao conectar ao PostgreSQL:', err));
 
 // ===== USERS =====

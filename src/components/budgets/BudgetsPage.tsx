@@ -12,6 +12,7 @@ import {
   useCurrentUser, useBudgets, useTransactions, useCategories,
   useCreateBudget, useUpdateBudget, useDeleteBudget,
 } from '@/hooks/use-api';
+import { useToast } from '@/components/ui/use-toast';
 
 export function BudgetsPage() {
   const currentDate = new Date();
@@ -20,6 +21,7 @@ export function BudgetsPage() {
 
   const [editingBudget, setEditingBudget] = useState<any>(null);
   const [isBudgetFormOpen, setIsBudgetFormOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: currentUser } = useCurrentUser();
   const userId = currentUser?.id;
@@ -48,16 +50,26 @@ export function BudgetsPage() {
   const handleAddBudget = (data: any) =>
     createBudget.mutate(
       { ...data, month: currentMonth, year: currentYear },
-      { onSuccess: () => setIsBudgetFormOpen(false) }
+      {
+        onSuccess: () => { toast({ title: 'Sucesso!', description: 'Orçamento criado.' }); setIsBudgetFormOpen(false); },
+        onError: (err) => { console.error(err); toast({ title: 'Erro ao criar orçamento', description: 'Verifique os dados e tente novamente.', variant: 'destructive' }); },
+      }
     );
 
   const handleEditBudget = (data: any) =>
     updateBudget.mutate(
       { id: editingBudget.id, ...data, month: currentMonth, year: currentYear },
-      { onSuccess: () => { setEditingBudget(null); setIsBudgetFormOpen(false); } }
+      {
+        onSuccess: () => { toast({ title: 'Sucesso!', description: 'Orçamento atualizado.' }); setEditingBudget(null); setIsBudgetFormOpen(false); },
+        onError: (err) => { console.error(err); toast({ title: 'Erro ao atualizar orçamento', variant: 'destructive' }); },
+      }
     );
 
-  const handleDeleteBudget = (id: string) => deleteBudget.mutate(id);
+  const handleDeleteBudget = (id: string) =>
+    deleteBudget.mutate(id, {
+      onSuccess: () => toast({ title: 'Orçamento excluído.' }),
+      onError: (err) => { console.error(err); toast({ title: 'Erro ao excluir orçamento', variant: 'destructive' }); },
+    });
 
   const getBudgetStatus = (budget: any) => {
     const percentage = (budget.spent / budget.amount) * 100;

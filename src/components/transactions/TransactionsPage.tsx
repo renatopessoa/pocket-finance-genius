@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { TransactionForm } from './TransactionForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
 import {
   useCurrentUser, useTransactions, useCreateTransaction,
   useUpdateTransaction, useDeleteTransaction, useCategories, useAccounts,
@@ -24,6 +25,7 @@ export function TransactionsPage() {
   const [accountFilter, setAccountFilter] = useState('all');
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: currentUser } = useCurrentUser();
   const userId = currentUser?.id;
@@ -45,13 +47,40 @@ export function TransactionsPage() {
   });
 
   const handleAddTransaction = (data: any | any[]) => {
-    createTransaction.mutate(data, { onSuccess: () => setIsFormOpen(false) });
+    createTransaction.mutate(data, {
+      onSuccess: () => {
+        toast({ title: 'Sucesso!', description: 'Transação adicionada.' });
+        setIsFormOpen(false);
+      },
+      onError: (error) => {
+        console.error('Erro ao criar transação:', error);
+        toast({
+          title: 'Erro ao criar transação',
+          description: 'Ocorreu um erro ao tentar adicionar a transação. Tente novamente.',
+          variant: 'destructive',
+        });
+      },
+    });
   };
 
   const handleEditTransaction = (data: any) => {
     updateTransaction.mutate(
       { id: editingTransaction.id, ...data },
-      { onSuccess: () => { setEditingTransaction(null); setIsFormOpen(false); } }
+      {
+        onSuccess: () => {
+          toast({ title: 'Sucesso!', description: 'Transação atualizada.' });
+          setEditingTransaction(null);
+          setIsFormOpen(false);
+        },
+        onError: (error) => {
+          console.error('Erro ao atualizar transação:', error);
+          toast({
+            title: 'Erro ao atualizar transação',
+            description: 'Ocorreu um erro ao tentar atualizar. Tente novamente.',
+            variant: 'destructive',
+          });
+        },
+      }
     );
   };
 
