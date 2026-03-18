@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Save, Palette, Globe, Calculator } from 'lucide-react';
+import { Save, Palette, Globe, Calculator, BarChart3 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export function PreferencesSettings() {
@@ -18,7 +18,10 @@ export function PreferencesSettings() {
     autoBackup: true,
     compactView: false,
     showDecimals: true,
-    defaultTransactionType: 'expense'
+    defaultTransactionType: 'expense',
+    chartColorTheme: 'pastel',
+    chartViewMode: 'standard',
+    chartAnimations: true,
   });
 
   const { toast } = useToast();
@@ -138,6 +141,56 @@ export function PreferencesSettings() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Configurações do Dashboard
+          </CardTitle>
+          <CardDescription>Personalize a visualização dos gráficos e relatórios</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="chartColorTheme">Paleta de Cores dos Gráficos</Label>
+            <Select value={preferences.chartColorTheme} onValueChange={(value) => updatePreference('chartColorTheme', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a paleta" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Padrão</SelectItem>
+                <SelectItem value="pastel">Pastel</SelectItem>
+                <SelectItem value="vibrant">Vibrante</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="chartViewMode">Modo de Visualização</Label>
+            <Select value={preferences.chartViewMode} onValueChange={(value) => updatePreference('chartViewMode', value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o modo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="minimal">Minimal</SelectItem>
+                <SelectItem value="standard">Standard</SelectItem>
+                <SelectItem value="detailed">Detalhado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label>Animações dos Gráficos</Label>
+              <p className="text-sm text-gray-500">Ativar animações de transição nos gráficos</p>
+            </div>
+            <Switch
+              checked={preferences.chartAnimations}
+              onCheckedChange={(checked) => updatePreference('chartAnimations', checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
             <Calculator className="h-5 w-5" />
             Configurações Financeiras
           </CardTitle>
@@ -188,3 +241,4 @@ export function PreferencesSettings() {
     </div>
   );
 }
+

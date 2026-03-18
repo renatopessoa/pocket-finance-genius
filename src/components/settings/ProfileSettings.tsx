@@ -10,11 +10,11 @@ import { useToast } from '@/hooks/use-toast';
 
 export function ProfileSettings() {
   const [formData, setFormData] = useState({
-    firstName: 'João',
-    lastName: 'Silva',
-    email: 'joao.silva@email.com',
-    phone: '(11) 99999-9999',
-    bio: 'Entusiasta de finanças pessoais'
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    bio: ''
   });
 
   const { toast } = useToast();
