@@ -455,7 +455,7 @@ app.get('/api/educational-content', async (req, res) => {
 });
 
 // ── SPA catch-all: qualquer rota que não seja /api cai no index.html ──
-app.get('*', (req, res) => {
+app.get('{*path}', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
