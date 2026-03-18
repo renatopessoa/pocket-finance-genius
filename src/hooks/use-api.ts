@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '@/context/AuthContext';
 
 const API_URL = 'http://localhost:3001/api';
 
@@ -54,16 +55,12 @@ const toBudget = (row: any) => ({
 
 // ─── USER ─────────────────────────────────────────────────────────────────────
 
-export const useCurrentUser = () =>
-    useQuery({
-        queryKey: ['currentUser'],
-        queryFn: async () => {
-            const res = await fetch(`${API_URL}/users/initialize`, { method: 'POST' });
-            if (!res.ok) throw new Error('Erro ao buscar usuário');
-            return res.json() as Promise<{ id: string; name: string; email: string; avatar?: string }>;
-        },
-        staleTime: Infinity,
-    });
+// Reads the authenticated user from AuthContext (localStorage session).
+// Returns the same shape as before so all consumers work without changes.
+export const useCurrentUser = () => {
+    const { currentUser } = useAuth();
+    return { data: currentUser ?? undefined, isLoading: false, isError: false };
+};
 
 // ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
 

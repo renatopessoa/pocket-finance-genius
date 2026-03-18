@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import pkg from 'pg';
+import bcrypt from 'bcryptjs';
 const { Pool } = pkg;
 
 const app = express();
@@ -42,12 +43,66 @@ async function seedCategories() {
     console.log(`Seed: ${cats.length} categorias inseridas.`);
 }
 
+// ── Ensure password_hash column exists ──
+async function ensurePasswordHashColumn() {
+    await pool.query(`
+        ALTER TABLE pfg_users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+    `);
+}
+
 pool.connect()
     .then(async () => {
         console.log('Conectado ao PostgreSQL com sucesso!');
+        await ensurePasswordHashColumn();
         await seedCategories();
     })
     .catch(err => console.error('Erro ao conectar ao PostgreSQL:', err));
+
+// ===== AUTH =====
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+        if (!name || !email || !password) {
+            return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios' });
+        }
+        // Check if email already exists
+        const existing = await pool.query('SELECT id FROM pfg_users WHERE email = $1', [email]);
+        if (existing.rows.length > 0) {
+            return res.status(409).json({ error: 'Este e-mail já está cadastrado' });
+        }
+        const password_hash = await bcrypt.hash(password, 10);
+        const result = await pool.query(
+            'INSERT INTO pfg_users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, avatar, created_at',
+            [name, email, password_hash]
+        );
+        res.status(201).json(result.rows[0]);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao criar usuário' });
+    }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'E-mail e senha são obrigatórios' });
+        }
+        const result = await pool.query('SELECT * FROM pfg_users WHERE email = $1', [email]);
+        if (result.rows.length === 0) {
+            return res.status(401).json({ error: 'E-mail ou senha inválidos' });
+        }
+        const user = result.rows[0];
+        const valid = await bcrypt.compare(password, user.password_hash || '');
+        if (!valid) {
+            return res.status(401).json({ error: 'E-mail ou senha inválidos' });
+        }
+        res.json({ id: user.id, name: user.name, email: user.email, avatar: user.avatar });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao fazer login' });
+    }
+});
 
 // ===== USERS =====
 app.get('/api/users', async (req, res) => {
@@ -71,22 +126,6 @@ app.post('/api/users', async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao criar usuário' });
-    }
-});
-
-// Retorna o primeiro usuário ou cria um padrão
-app.post('/api/users/initialize', async (req, res) => {
-    try {
-        const check = await pool.query('SELECT * FROM pfg_users LIMIT 1');
-        if (check.rows.length > 0) return res.json(check.rows[0]);
-        const result = await pool.query(
-            'INSERT INTO pfg_users (name, email) VALUES ($1, $2) RETURNING *',
-            ['Usuário', 'usuario@exemplo.com']
-        );
-        res.status(201).json(result.rows[0]);
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Erro ao inicializar usuário' });
     }
 });
 
@@ -238,6 +277,7 @@ app.get('/api/transactions', async (req, res) => {
 });
 
 // Suporta um objeto ou um array (parcelas)
+// Ao criar, atualiza o saldo da conta (income = +, expense = -)
 app.post('/api/transactions', async (req, res) => {
     const items = Array.isArray(req.body) ? req.body : [req.body];
     const client = await pool.connect();
@@ -251,6 +291,13 @@ app.post('/api/transactions', async (req, res) => {
                 [amount, description, date, type, category_id, account_id, user_id, recurring ?? false, tags ?? []]
             );
             results.push(result.rows[0]);
+
+            // ── Atualiza saldo da conta ──
+            const delta = type === 'income' ? amount : -amount;
+            await client.query(
+                'UPDATE pfg_accounts SET balance = balance + $1 WHERE id = $2',
+                [delta, account_id]
+            );
         }
         await client.query('COMMIT');
         res.status(201).json(Array.isArray(req.body) ? results : results[0]);
@@ -264,29 +311,63 @@ app.post('/api/transactions', async (req, res) => {
 });
 
 app.put('/api/transactions/:id', async (req, res) => {
+    const client = await pool.connect();
     try {
         const { id } = req.params;
         const { amount, description, date, type, category_id, account_id, recurring, tags } = req.body;
-        const result = await pool.query(
+
+        // Busca transação anterior para reverter o saldo
+        const old = await client.query('SELECT amount, type, account_id FROM pfg_transactions WHERE id = $1', [id]);
+        if (old.rows.length === 0) return res.status(404).json({ error: 'Transação não encontrada' });
+
+        await client.query('BEGIN');
+
+        // Reverte o efeito da transação antiga na conta antiga
+        const oldDelta = old.rows[0].type === 'income' ? -old.rows[0].amount : old.rows[0].amount;
+        await client.query('UPDATE pfg_accounts SET balance = balance + $1 WHERE id = $2', [oldDelta, old.rows[0].account_id]);
+
+        // Aplica o efeito da transação nova na conta nova
+        const newDelta = type === 'income' ? amount : -amount;
+        await client.query('UPDATE pfg_accounts SET balance = balance + $1 WHERE id = $2', [newDelta, account_id]);
+
+        const result = await client.query(
             'UPDATE pfg_transactions SET amount=$1, description=$2, date=$3, type=$4, category_id=$5, account_id=$6, recurring=$7, tags=$8 WHERE id=$9 RETURNING *',
             [amount, description, date, type, category_id, account_id, recurring ?? false, tags ?? [], id]
         );
-        if (result.rows.length === 0) return res.status(404).json({ error: 'Transação não encontrada' });
+
+        await client.query('COMMIT');
         res.json(result.rows[0]);
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error(err);
         res.status(500).json({ error: 'Erro ao atualizar transação' });
+    } finally {
+        client.release();
     }
 });
 
 app.delete('/api/transactions/:id', async (req, res) => {
+    const client = await pool.connect();
     try {
         const { id } = req.params;
-        await pool.query('DELETE FROM pfg_transactions WHERE id = $1', [id]);
+
+        // Busca transação para reverter o saldo
+        const old = await client.query('SELECT amount, type, account_id FROM pfg_transactions WHERE id = $1', [id]);
+        if (old.rows.length === 0) return res.status(404).json({ error: 'Transação não encontrada' });
+
+        await client.query('BEGIN');
+        // Reverte o efeito no saldo da conta
+        const delta = old.rows[0].type === 'income' ? -old.rows[0].amount : old.rows[0].amount;
+        await client.query('UPDATE pfg_accounts SET balance = balance + $1 WHERE id = $2', [delta, old.rows[0].account_id]);
+        await client.query('DELETE FROM pfg_transactions WHERE id = $1', [id]);
+        await client.query('COMMIT');
         res.status(204).send();
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error(err);
         res.status(500).json({ error: 'Erro ao excluir transação' });
+    } finally {
+        client.release();
     }
 });
 
