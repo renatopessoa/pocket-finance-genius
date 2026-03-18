@@ -32,6 +32,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
   });
 
   const [isInstallment, setIsInstallment] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
   const [installmentsCount, setInstallmentsCount] = useState(2);
   const [installmentValue, setInstallmentValue] = useState('');
 
@@ -47,6 +48,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
         tags: transaction.tags?.join(', ') || '',
       });
       setIsInstallment(false);
+      setIsRecurring(transaction.isRecurring || false);
     }
   }, [transaction]);
 
@@ -64,6 +66,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
 
     const baseTransaction = {
       ...formData,
+      isRecurring,
       tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
     };
 
@@ -150,16 +153,32 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
           />
         </div>
 
-        {formData.type === 'expense' && !transaction && (
+        <div className="flex items-center gap-6">
+          {formData.type === 'expense' && !transaction && (
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="installment"
+                checked={isInstallment}
+                onCheckedChange={(checked) => {
+                  setIsInstallment(checked);
+                  if (checked) setIsRecurring(false);
+                }}
+              />
+              <Label htmlFor="installment">Parcelado</Label>
+            </div>
+          )}
           <div className="flex items-center space-x-2">
             <Switch
-              id="installment"
-              checked={isInstallment}
-              onCheckedChange={setIsInstallment}
+              id="recurring"
+              checked={isRecurring}
+              onCheckedChange={(checked) => {
+                setIsRecurring(checked);
+                if (checked) setIsInstallment(false);
+              }}
             />
-            <Label htmlFor="installment">Parcelado</Label>
+            <Label htmlFor="recurring">Recorrente</Label>
           </div>
-        )}
+        </div>
 
         {isInstallment && formData.type === 'expense' && !transaction && (
           <div className="grid grid-cols-2 gap-4 border p-4 rounded-md bg-muted/50">

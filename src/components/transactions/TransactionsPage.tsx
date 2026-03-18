@@ -204,9 +204,16 @@ export function TransactionsPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>
-                            {transaction.type === 'income' ? 'Receita' : 'Despesa'}
-                          </Badge>
+                          <div className="flex gap-2">
+                            <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>
+                              {transaction.type === 'income' ? 'Receita' : 'Despesa'}
+                            </Badge>
+                            {transaction.recurring && (
+                              <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-400">
+                                Recorrente
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
                           {transaction.type === 'income' ? '+' : '-'}
