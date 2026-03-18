@@ -1,29 +1,310 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-// URL base do nosso novo backend
 const API_URL = 'http://localhost:3001/api';
 
-export const useUsers = () => {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+// ─── Mappers DB (snake_case) → Frontend (camelCase) ───────────────────────────
 
-    useEffect(() => {
-        const fetchUsers = async () => {
-            try {
-                const response = await fetch(`${API_URL}/users`);
-                if (!response.ok) throw new Error('Erro na rede');
-                const data = await response.json();
-                setUsers(data);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
+const toCategory = (row: any) => ({
+    id: row.id as string,
+    name: row.name as string,
+    icon: (row.icon as string) || '',
+    color: (row.color as string) || '#666',
+    type: row.type as 'income' | 'expense',
+    budgetLimit: row.budget_limit != null ? parseFloat(row.budget_limit) : undefined,
+});
 
-        fetchUsers();
-    }, []);
+const toAccount = (row: any) => ({
+    id: row.id as string,
+    name: row.name as string,
+    type: row.type as string,
+    balance: parseFloat(row.balance),
+    userId: row.user_id as string,
+    color: (row.color as string) || '#3B82F6',
+    icon: (row.icon as string) || 'Wallet',
+});
 
-    return { users, loading, error };
+const toTransaction = (row: any) => ({
+    id: row.id as string,
+    amount: parseFloat(row.amount),
+    description: row.description as string,
+    date: new Date(row.date),
+    type: row.type as 'income' | 'expense',
+    categoryId: row.category_id as string,
+    accountId: row.account_id as string,
+    userId: row.user_id as string,
+    recurring: row.recurring ?? false,
+    tags: (row.tags as string[]) || [],
+    categoryName: row.category_name as string | undefined,
+    categoryColor: row.category_color as string | undefined,
+    categoryIcon: row.category_icon as string | undefined,
+});
+
+const toBudget = (row: any) => ({
+    id: row.id as string,
+    categoryId: row.category_id as string,
+    amount: parseFloat(row.amount),
+    spent: parseFloat(row.spent),
+    month: row.month as number,
+    year: row.year as number,
+    userId: row.user_id as string,
+    categoryName: row.category_name as string | undefined,
+    categoryColor: row.category_color as string | undefined,
+    categoryIcon: row.category_icon as string | undefined,
+});
+
+// ─── USER ─────────────────────────────────────────────────────────────────────
+
+export const useCurrentUser = () =>
+    useQuery({
+        queryKey: ['currentUser'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/users/initialize`, { method: 'POST' });
+            if (!res.ok) throw new Error('Erro ao buscar usuário');
+            return res.json() as Promise<{ id: string; name: string; email: string; avatar?: string }>;
+        },
+        staleTime: Infinity,
+    });
+
+// ─── ACCOUNTS ─────────────────────────────────────────────────────────────────
+
+export const useAccounts = (userId?: string) =>
+    useQuery({
+        queryKey: ['accounts', userId],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/accounts?user_id=${userId}`);
+            if (!res.ok) throw new Error('Erro ao buscar contas');
+            return ((await res.json()) as any[]).map(toAccount);
+        },
+        enabled: !!userId,
+    });
+
+export const useCreateAccount = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: any) => {
+            const res = await fetch(`${API_URL}/accounts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: data.name, type: data.type, balance: data.balance, user_id: userId, color: data.color, icon: data.icon }),
+            });
+            if (!res.ok) throw new Error('Erro ao criar conta');
+            return toAccount(await res.json());
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    });
 };
+
+export const useUpdateAccount = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, ...data }: any) => {
+            const res = await fetch(`${API_URL}/accounts/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: data.name, type: data.type, balance: data.balance, color: data.color, icon: data.icon }),
+            });
+            if (!res.ok) throw new Error('Erro ao atualizar conta');
+            return toAccount(await res.json());
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    });
+};
+
+export const useDeleteAccount = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${API_URL}/accounts/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erro ao excluir conta');
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    });
+};
+
+export const useTransferFunds = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: { fromAccountId: string; toAccountId: string; amount: number }) => {
+            const res = await fetch(`${API_URL}/accounts/transfer`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ from_account_id: data.fromAccountId, to_account_id: data.toAccountId, amount: data.amount }),
+            });
+            if (!res.ok) throw new Error('Erro ao realizar transferência');
+            return res.json();
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['accounts', userId] }),
+    });
+};
+
+// ─── CATEGORIES ───────────────────────────────────────────────────────────────
+
+export const useCategories = () =>
+    useQuery({
+        queryKey: ['categories'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/categories`);
+            if (!res.ok) throw new Error('Erro ao buscar categorias');
+            return ((await res.json()) as any[]).map(toCategory);
+        },
+        staleTime: 5 * 60 * 1000,
+    });
+
+// ─── TRANSACTIONS ─────────────────────────────────────────────────────────────
+
+export const useTransactions = (userId?: string) =>
+    useQuery({
+        queryKey: ['transactions', userId],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/transactions?user_id=${userId}`);
+            if (!res.ok) throw new Error('Erro ao buscar transações');
+            return ((await res.json()) as any[]).map(toTransaction);
+        },
+        enabled: !!userId,
+    });
+
+export const useCreateTransaction = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: any | any[]) => {
+            const fmt = (item: any) => ({
+                amount: item.amount,
+                description: item.description,
+                date: item.date instanceof Date ? item.date.toISOString() : item.date,
+                type: item.type,
+                category_id: item.categoryId,
+                account_id: item.accountId,
+                user_id: userId,
+                recurring: item.recurring ?? false,
+                tags: item.tags ?? [],
+            });
+            const payload = Array.isArray(data) ? data.map(fmt) : fmt(data);
+            const res = await fetch(`${API_URL}/transactions`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (!res.ok) throw new Error('Erro ao criar transação');
+            const json = await res.json();
+            return Array.isArray(json) ? json.map(toTransaction) : toTransaction(json);
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', userId] }),
+    });
+};
+
+export const useUpdateTransaction = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, ...data }: any) => {
+            const res = await fetch(`${API_URL}/transactions/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    amount: data.amount,
+                    description: data.description,
+                    date: data.date instanceof Date ? data.date.toISOString() : data.date,
+                    type: data.type,
+                    category_id: data.categoryId,
+                    account_id: data.accountId,
+                    recurring: data.recurring ?? false,
+                    tags: data.tags ?? [],
+                }),
+            });
+            if (!res.ok) throw new Error('Erro ao atualizar transação');
+            return toTransaction(await res.json());
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', userId] }),
+    });
+};
+
+export const useDeleteTransaction = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${API_URL}/transactions/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erro ao excluir transação');
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', userId] }),
+    });
+};
+
+// ─── BUDGETS ──────────────────────────────────────────────────────────────────
+
+export const useBudgets = (userId?: string, month?: number, year?: number) =>
+    useQuery({
+        queryKey: ['budgets', userId, month, year],
+        queryFn: async () => {
+            const params = new URLSearchParams({ user_id: userId! });
+            if (month !== undefined) params.append('month', String(month));
+            if (year !== undefined) params.append('year', String(year));
+            const res = await fetch(`${API_URL}/budgets?${params}`);
+            if (!res.ok) throw new Error('Erro ao buscar orçamentos');
+            return ((await res.json()) as any[]).map(toBudget);
+        },
+        enabled: !!userId,
+    });
+
+export const useCreateBudget = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: any) => {
+            const res = await fetch(`${API_URL}/budgets`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category_id: data.categoryId, amount: data.amount, month: data.month, year: data.year, user_id: userId }),
+            });
+            if (!res.ok) throw new Error('Erro ao criar orçamento');
+            return toBudget(await res.json());
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets', userId] }),
+    });
+};
+
+export const useUpdateBudget = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async ({ id, ...data }: any) => {
+            const res = await fetch(`${API_URL}/budgets/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ category_id: data.categoryId, amount: data.amount, month: data.month, year: data.year }),
+            });
+            if (!res.ok) throw new Error('Erro ao atualizar orçamento');
+            return toBudget(await res.json());
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets', userId] }),
+    });
+};
+
+export const useDeleteBudget = (userId: string) => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${API_URL}/budgets/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erro ao excluir orçamento');
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['budgets', userId] }),
+    });
+};
+
+/* ── EDUCATIONAL CONTENT ── */
+const toEducationalContent = (row: any) => ({
+    id: row.id as string,
+    title: row.title as string,
+    content: row.content as string,
+    type: row.type as string,
+    category: row.category as string,
+    difficulty: row.difficulty as string,
+    readTime: row.read_time as number | null,
+});
+
+export const useEducationalContent = () =>
+    useQuery({
+        queryKey: ['educational-content'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/educational-content`);
+            if (!res.ok) throw new Error('Erro ao buscar conteúdo educacional');
+            return ((await res.json()) as any[]).map(toEducationalContent);
+        },
+        staleTime: 5 * 60 * 1000,
+    });

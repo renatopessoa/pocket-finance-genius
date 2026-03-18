@@ -1,22 +1,31 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
-import { mockTransactions, mockAccounts } from '@/lib/mockData';
+import { useCurrentUser, useAccounts, useTransactions } from '@/hooks/use-api';
 
 export function StatsCards() {
-  const totalBalance = mockAccounts.reduce((sum, account) => sum + account.balance, 0);
-  
+  const { data: currentUser } = useCurrentUser();
+  const userId = currentUser?.id;
+
+  const { data: accounts = [], isLoading: loadingAccounts } = useAccounts(userId);
+  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(userId);
+
+  const isLoading = loadingAccounts || loadingTransactions;
+
+  const totalBalance = accounts.reduce((sum, account) => sum + account.balance, 0);
+
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-  
-  const monthlyTransactions = mockTransactions.filter(t => 
+
+  const monthlyTransactions = transactions.filter(t =>
     t.date.getMonth() === currentMonth && t.date.getFullYear() === currentYear
   );
-  
+
   const monthlyIncome = monthlyTransactions
     .filter(t => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
-    
+
   const monthlyExpenses = monthlyTransactions
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + t.amount, 0);
@@ -51,6 +60,14 @@ export function StatsCards() {
       bgColor: 'bg-purple-50 dark:bg-purple-900/20'
     }
   ];
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { mockCategories } from '@/lib/mockData';
+import { useCategories } from '@/hooks/use-api';
 
 interface BudgetFormProps {
   budget?: any;
@@ -15,14 +15,13 @@ interface BudgetFormProps {
 }
 
 export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: BudgetFormProps) {
-  const [formData, setFormData] = useState({
-    categoryId: '',
-    amount: '',
-  });
+  const [formData, setFormData] = useState({ categoryId: '', amount: '' });
 
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth() + 1;
   const currentYear = currentDate.getFullYear();
+
+  const { data: allCategories = [] } = useCategories();
 
   useEffect(() => {
     if (budget) {
@@ -35,11 +34,11 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Verificar se já existe orçamento para esta categoria no mês atual
-    const existingBudget = existingBudgets.find(b => 
-      b.categoryId === formData.categoryId && 
-      b.month === currentMonth && 
+    const existingBudget = existingBudgets.find(b =>
+      b.categoryId === formData.categoryId &&
+      b.month === currentMonth &&
       b.year === currentYear &&
       b.id !== budget?.id
     );
@@ -48,32 +47,26 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
       alert('Já existe um orçamento para esta categoria no mês atual');
       return;
     }
-    
+
     const budgetData = {
       ...formData,
       amount: parseFloat(formData.amount),
     };
-    
+
     onSubmit(budgetData);
   };
 
   // Filtrar apenas categorias de despesa que ainda não têm orçamento (exceto a que está sendo editada)
-  const availableCategories = mockCategories.filter(category => {
+  const availableCategories = allCategories.filter(category => {
     if (category.type !== 'expense') return false;
-    if (!category.id || category.id.trim() === '') return false;
-    
-    const hasExistingBudget = existingBudgets.some(b => 
-      b.categoryId === category.id && 
-      b.month === currentMonth && 
+    const hasExistingBudget = existingBudgets.some(b =>
+      b.categoryId === category.id &&
+      b.month === currentMonth &&
       b.year === currentYear &&
       b.id !== budget?.id
     );
-    
     return !hasExistingBudget;
   });
-
-  console.log('Available categories for budget:', availableCategories);
-  console.log('Current budget category ID:', budget?.categoryId);
 
   return (
     <div>
@@ -82,12 +75,12 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
           {budget ? 'Editar Orçamento' : 'Novo Orçamento'}
         </DialogTitle>
       </DialogHeader>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4 mt-4">
         <div>
           <Label htmlFor="category">Categoria</Label>
-          <Select 
-            value={formData.categoryId} 
+          <Select
+            value={formData.categoryId}
             onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
           >
             <SelectTrigger>
@@ -97,18 +90,18 @@ export function BudgetForm({ budget, onSubmit, onCancel, existingBudgets }: Budg
               {budget && budget.categoryId && (
                 <SelectItem value={budget.categoryId}>
                   <div className="flex items-center space-x-2">
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: mockCategories.find(c => c.id === budget.categoryId)?.color }}
+                      style={{ backgroundColor: allCategories.find(c => c.id === budget.categoryId)?.color }}
                     />
-                    <span>{mockCategories.find(c => c.id === budget.categoryId)?.name}</span>
+                    <span>{allCategories.find(c => c.id === budget.categoryId)?.name}</span>
                   </div>
                 </SelectItem>
               )}
               {availableCategories.map(category => (
                 <SelectItem key={category.id} value={category.id}>
                   <div className="flex items-center space-x-2">
-                    <div 
+                    <div
                       className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: category.color }}
                     />

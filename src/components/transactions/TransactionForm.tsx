@@ -7,11 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { mockCategories, mockAccounts } from '@/lib/mockData';
+import { useCategories, useAccounts, useCurrentUser } from '@/hooks/use-api';
 
 interface TransactionFormProps {
   transaction?: any;
@@ -30,6 +31,10 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
     tags: '',
   });
 
+  const [isInstallment, setIsInstallment] = useState(false);
+  const [installmentsCount, setInstallmentsCount] = useState(2);
+  const [installmentValue, setInstallmentValue] = useState('');
+
   useEffect(() => {
     if (transaction) {
       setFormData({
@@ -41,46 +46,58 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
         accountId: transaction.accountId,
         tags: transaction.tags?.join(', ') || '',
       });
+      setIsInstallment(false);
     }
   }, [transaction]);
 
+  useEffect(() => {
+    if (formData.amount && installmentsCount > 0 && isInstallment) {
+      const val = (parseFloat(formData.amount) / installmentsCount).toFixed(2);
+      setInstallmentValue(val);
+    } else {
+      setInstallmentValue('');
+    }
+  }, [formData.amount, installmentsCount, isInstallment]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const transactionData = {
+
+    const baseTransaction = {
       ...formData,
-      amount: parseFloat(formData.amount),
       tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()) : [],
     };
-    
-    onSubmit(transactionData);
+
+    if (isInstallment && formData.type === 'expense') {
+      const transactions = [];
+      const instValue = parseFloat(installmentValue) || (parseFloat(formData.amount) / installmentsCount);
+
+      for (let i = 0; i < installmentsCount; i++) {
+        const installmentDate = new Date(formData.date);
+        installmentDate.setMonth(installmentDate.getMonth() + i);
+
+        transactions.push({
+          ...baseTransaction,
+          amount: parseFloat(instValue.toFixed(2)),
+          description: `${formData.description} (${i + 1}/${installmentsCount})`,
+          date: installmentDate,
+        });
+      }
+
+      onSubmit(transactions);
+    } else {
+      onSubmit({
+        ...baseTransaction,
+        amount: parseFloat(formData.amount),
+      });
+    }
   };
 
-  // Filter and validate categories
-  const filteredCategories = mockCategories.filter(category => {
-    return category && 
-           category.type === formData.type && 
-           category.id && 
-           typeof category.id === 'string' && 
-           category.id.trim() !== '' &&
-           category.name &&
-           typeof category.name === 'string' &&
-           category.name.trim() !== '';
-  });
+  const { data: currentUser } = useCurrentUser();
+  const { data: allCategories = [] } = useCategories();
+  const { data: allAccounts = [] } = useAccounts(currentUser?.id);
 
-  // Filter and validate accounts
-  const validAccounts = mockAccounts.filter(account => {
-    return account && 
-           account.id && 
-           typeof account.id === 'string' && 
-           account.id.trim() !== '' &&
-           account.name &&
-           typeof account.name === 'string' &&
-           account.name.trim() !== '';
-  });
-
-  console.log('Filtered categories:', filteredCategories);
-  console.log('Valid accounts:', validAccounts);
+  const filteredCategories = allCategories.filter(c => c.type === formData.type);
+  const validAccounts = allAccounts;
 
   return (
     <div>
@@ -89,13 +106,13 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
           {transaction ? 'Editar Transação' : 'Nova Transação'}
         </DialogTitle>
       </DialogHeader>
-      
+
       <form onSubmit={handleSubmit} className="space-y-4 mt-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="type">Tipo</Label>
-            <Select 
-              value={formData.type} 
+            <Select
+              value={formData.type}
               onValueChange={(value) => setFormData(prev => ({ ...prev, type: value, categoryId: '' }))}
             >
               <SelectTrigger>
@@ -107,7 +124,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
               </SelectContent>
             </Select>
           </div>
-          
+
           <div>
             <Label htmlFor="amount">Valor</Label>
             <Input
@@ -132,6 +149,53 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
             required
           />
         </div>
+
+        {formData.type === 'expense' && !transaction && (
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="installment"
+              checked={isInstallment}
+              onCheckedChange={setIsInstallment}
+            />
+            <Label htmlFor="installment">Parcelado</Label>
+          </div>
+        )}
+
+        {isInstallment && formData.type === 'expense' && !transaction && (
+          <div className="grid grid-cols-2 gap-4 border p-4 rounded-md bg-muted/50">
+            <div>
+              <Label htmlFor="installmentsCount">Número de parcelas</Label>
+              <Input
+                id="installmentsCount"
+                type="number"
+                min="2"
+                step="1"
+                value={installmentsCount}
+                onChange={(e) => setInstallmentsCount(parseInt(e.target.value) || 2)}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="installmentValue">Valor das parcelas</Label>
+              <Input
+                id="installmentValue"
+                type="number"
+                step="0.01"
+                value={installmentValue}
+                onChange={(e) => {
+                  setInstallmentValue(e.target.value);
+                  if (e.target.value && installmentsCount > 0) {
+                    setFormData(prev => ({ ...prev, amount: (parseFloat(e.target.value) * installmentsCount).toFixed(2) }));
+                  }
+                }}
+                required
+              />
+            </div>
+            <div className="col-span-2 text-sm text-muted-foreground">
+              A primeira parcela será em <strong>{formData.date ? format(formData.date, 'dd/MM/yyyy', { locale: ptBR }) : "--"}</strong> e as demais nos meses seguintes.
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -163,8 +227,8 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
 
           <div>
             <Label htmlFor="account">Conta</Label>
-            <Select 
-              value={formData.accountId} 
+            <Select
+              value={formData.accountId}
               onValueChange={(value) => setFormData(prev => ({ ...prev, accountId: value }))}
             >
               <SelectTrigger>
@@ -175,7 +239,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
                   validAccounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       <div className="flex items-center space-x-2">
-                        <div 
+                        <div
                           className="w-3 h-3 rounded-full"
                           style={{ backgroundColor: account.color || '#666' }}
                         />
@@ -195,8 +259,8 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
 
         <div>
           <Label htmlFor="category">Categoria</Label>
-          <Select 
-            value={formData.categoryId} 
+          <Select
+            value={formData.categoryId}
             onValueChange={(value) => setFormData(prev => ({ ...prev, categoryId: value }))}
           >
             <SelectTrigger>
@@ -207,7 +271,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
                 filteredCategories.map(category => (
                   <SelectItem key={category.id} value={category.id}>
                     <div className="flex items-center space-x-2">
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: category.color || '#666' }}
                       />

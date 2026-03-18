@@ -11,6 +11,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, Area, AreaChart
 } from 'recharts';
 import { mockTransactions, mockCategories } from '@/lib/mockData';
+import { useCurrentUser, useTransactions, useCategories } from '@/hooks/use-api';
 import { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon,
@@ -31,6 +32,14 @@ export function ExpenseChart() {
   const [colorTheme, setColorTheme] = useState<'default' | 'pastel' | 'vibrant'>('pastel');
   const [favorites, setFavorites] = useState<string[]>([]);
 
+  const { data: currentUser } = useCurrentUser();
+  const { data: apiTransactions = [] } = useTransactions(currentUser?.id);
+  const { data: apiCategories = [] } = useCategories();
+
+  // Use API data when available, fall back to mock for initial render
+  const transactions = apiTransactions.length > 0 ? apiTransactions : mockTransactions;
+  const categories = apiCategories.length > 0 ? apiCategories : mockCategories;
+
   // Soft color palettes
   const colorPalettes = {
     pastel: [
@@ -49,10 +58,10 @@ export function ExpenseChart() {
 
   // Memoized calculations for better performance
   const { expensesByCategory, totalExpenses, pieChartData, lineChartData, uniqueCategories, trends } = useMemo(() => {
-    const expensesByCategory = mockTransactions
+    const expensesByCategory = transactions
       .filter(t => t.type === 'expense')
       .reduce((acc, transaction) => {
-        const category = mockCategories.find(c => c.id === transaction.categoryId);
+        const category = categories.find(c => c.id === transaction.categoryId);
         if (category) {
           acc[category.name] = {
             amount: (acc[category.name]?.amount || 0) + transaction.amount,
@@ -86,7 +95,7 @@ export function ExpenseChart() {
       .sort((a, b) => b.value - a.value);
 
     // Group transactions by time period for line chart
-    const expensesByDate = mockTransactions
+    const expensesByDate = transactions
       .filter(t => t.type === 'expense')
       .reduce((acc, transaction) => {
         const date = new Date(transaction.date);
@@ -96,12 +105,12 @@ export function ExpenseChart() {
 
         if (!acc[key]) {
           acc[key] = {};
-          mockCategories.forEach(category => {
+          categories.forEach(category => {
             acc[key][category.name] = 0;
           });
         }
 
-        const category = mockCategories.find(c => c.id === transaction.categoryId);
+        const category = categories.find(c => c.id === transaction.categoryId);
         if (category) {
           acc[key][category.name] = (acc[key][category.name] || 0) + transaction.amount;
         }
@@ -120,8 +129,8 @@ export function ExpenseChart() {
       })
       .sort((a, b) => a.date.localeCompare(b.date));
 
-    const uniqueCategories = mockCategories
-      .filter(c => mockTransactions.some(t => t.categoryId === c.id && t.type === 'expense'))
+    const uniqueCategories = categories
+      .filter(c => transactions.some(t => t.categoryId === c.id && t.type === 'expense'))
       .map(c => ({ name: c.name, color: c.color }));
 
     return { expensesByCategory, totalExpenses, pieChartData, lineChartData, uniqueCategories, trends };
@@ -690,8 +699,8 @@ export function ExpenseChart() {
                       size="sm"
                       onClick={() => toggleCategoryVisibility(category.name)}
                       className={`text-xs rounded-full transition-all duration-300 ${selectedCategories.includes(category.name)
-                          ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white scale-105'
-                          : 'hover:scale-105'
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white scale-105'
+                        : 'hover:scale-105'
                         }`}
                     >
                       <div

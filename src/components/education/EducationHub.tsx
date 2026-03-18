@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Clock, TrendingUp, PiggyBank, CreditCard, Target } from 'lucide-react';
-import { mockEducationalContent } from '@/lib/mockData';
+import { useEducationalContent } from '@/hooks/use-api';
 
 export function EducationHub() {
+  const { data: educationalContent = [], isLoading } = useEducationalContent();
   const categories = [
     { id: 'saving', label: 'Economia', icon: PiggyBank, color: 'text-green-600' },
     { id: 'investing', label: 'Investimentos', icon: TrendingUp, color: 'text-blue-600' },
@@ -44,52 +46,58 @@ export function EducationHub() {
         </TabsList>
 
         <TabsContent value="all" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockEducationalContent.map((content) => {
-              const category = categories.find(c => c.id === content.category);
-              const Icon = category?.icon || BookOpen;
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {educationalContent.map((content) => {
+                const category = categories.find(c => c.id === content.category);
+                const Icon = category?.icon || BookOpen;
 
-              return (
-                <Card key={content.id} className="hover:shadow-lg transition-shadow duration-200">
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center space-x-2">
-                        <div className={`p-2 rounded-lg bg-${category?.color.split('-')[1]}-50 dark:bg-${category?.color.split('-')[1]}-900/20`}>
-                          <Icon className={`h-4 w-4 ${category?.color}`} />
+                return (
+                  <Card key={content.id} className="hover:shadow-lg transition-shadow duration-200">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center space-x-2">
+                          <div className={`p-2 rounded-lg bg-${category?.color.split('-')[1]}-50 dark:bg-${category?.color.split('-')[1]}-900/20`}>
+                            <Icon className={`h-4 w-4 ${category?.color}`} />
+                          </div>
+                          <Badge className={getDifficultyColor(content.difficulty)}>
+                            {content.difficulty === 'beginner' && 'Iniciante'}
+                            {content.difficulty === 'intermediate' && 'Intermediário'}
+                            {content.difficulty === 'advanced' && 'Avançado'}
+                          </Badge>
                         </div>
-                        <Badge className={getDifficultyColor(content.difficulty)}>
-                          {content.difficulty === 'beginner' && 'Iniciante'}
-                          {content.difficulty === 'intermediate' && 'Intermediário'}
-                          {content.difficulty === 'advanced' && 'Avançado'}
-                        </Badge>
+                        {content.readTime && (
+                          <div className="flex items-center text-sm text-gray-500">
+                            <Clock className="mr-1 h-3 w-3" />
+                            {content.readTime}min
+                          </div>
+                        )}
                       </div>
-                      {content.readTime && (
-                        <div className="flex items-center text-sm text-gray-500">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {content.readTime}min
-                        </div>
-                      )}
-                    </div>
-                    <CardTitle className="text-lg">{content.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
-                      {content.content}
-                    </p>
-                    <Button variant="outline" className="w-full">
-                      Ler Artigo
-                    </Button>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+                      <CardTitle className="text-lg">{content.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-3">
+                        {content.content}
+                      </p>
+                      <Button variant="outline" className="w-full">
+                        Ler Artigo
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </TabsContent>
 
         {categories.map(category => (
           <TabsContent key={category.id} value={category.id} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {mockEducationalContent
+              {educationalContent
                 .filter(content => content.category === category.id)
                 .map((content) => {
                   const Icon = category.icon;

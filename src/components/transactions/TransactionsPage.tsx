@@ -6,15 +6,18 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Search, Filter, Edit, Trash2, Calendar } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Plus, Search, Edit, Trash2 } from 'lucide-react';
 import { TransactionForm } from './TransactionForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { mockTransactions, mockCategories, mockAccounts } from '@/lib/mockData';
+import {
+  useCurrentUser, useTransactions, useCreateTransaction,
+  useUpdateTransaction, useDeleteTransaction, useCategories, useAccounts,
+} from '@/hooks/use-api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export function TransactionsPage() {
-  const [transactions, setTransactions] = useState(mockTransactions);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -22,63 +25,40 @@ export function TransactionsPage() {
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
 
+  const { data: currentUser } = useCurrentUser();
+  const userId = currentUser?.id;
+
+  const { data: transactions = [], isLoading } = useTransactions(userId);
+  const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts(userId);
+
+  const createTransaction = useCreateTransaction(userId ?? '');
+  const updateTransaction = useUpdateTransaction(userId ?? '');
+  const deleteTransaction = useDeleteTransaction(userId ?? '');
+
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === 'all' || transaction.type === typeFilter;
     const matchesCategory = categoryFilter === 'all' || transaction.categoryId === categoryFilter;
     const matchesAccount = accountFilter === 'all' || transaction.accountId === accountFilter;
-    
     return matchesSearch && matchesType && matchesCategory && matchesAccount;
   });
 
-  const handleAddTransaction = (transactionData: any) => {
-    const newTransaction = {
-      ...transactionData,
-      id: Date.now().toString(),
-      userId: '1',
-    };
-    setTransactions(prev => [...prev, newTransaction]);
-    setIsFormOpen(false);
+  const handleAddTransaction = (data: any | any[]) => {
+    createTransaction.mutate(data, { onSuccess: () => setIsFormOpen(false) });
   };
 
-  const handleEditTransaction = (transactionData: any) => {
-    setTransactions(prev => 
-      prev.map(t => t.id === editingTransaction.id ? { ...transactionData, id: editingTransaction.id } : t)
+  const handleEditTransaction = (data: any) => {
+    updateTransaction.mutate(
+      { id: editingTransaction.id, ...data },
+      { onSuccess: () => { setEditingTransaction(null); setIsFormOpen(false); } }
     );
-    setEditingTransaction(null);
-    setIsFormOpen(false);
   };
 
-  const handleDeleteTransaction = (transactionId: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== transactionId));
-  };
+  const handleDeleteTransaction = (id: string) => deleteTransaction.mutate(id);
 
-  const getCategory = (categoryId: string) => 
-    mockCategories.find(c => c.id === categoryId);
-
-  const getAccount = (accountId: string) => 
-    mockAccounts.find(a => a.id === accountId);
-
-  // Filter valid categories and accounts for select options
-  const validCategories = mockCategories.filter(category => 
-    category && 
-    category.id && 
-    typeof category.id === 'string' && 
-    category.id.trim() !== '' &&
-    category.name &&
-    typeof category.name === 'string' &&
-    category.name.trim() !== ''
-  );
-
-  const validAccounts = mockAccounts.filter(account => 
-    account && 
-    account.id && 
-    typeof account.id === 'string' && 
-    account.id.trim() !== '' &&
-    account.name &&
-    typeof account.name === 'string' &&
-    account.name.trim() !== ''
-  );
+  const getCategory = (categoryId: string) => categories.find(c => c.id === categoryId);
+  const getAccount = (accountId: string) => accounts.find(a => a.id === accountId);
 
   return (
     <div className="space-y-6">
@@ -115,9 +95,7 @@ export function TransactionsPage() {
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tipo" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os tipos</SelectItem>
                 <SelectItem value="income">Receita</SelectItem>
@@ -125,29 +103,17 @@ export function TransactionsPage() {
               </SelectContent>
             </Select>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Categoria" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as categorias</SelectItem>
-                {validCategories.map(category => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
+                {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={accountFilter} onValueChange={setAccountFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Conta" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Conta" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas as contas</SelectItem>
-                {validAccounts.map(account => (
-                  <SelectItem key={account.id} value={account.id}>
-                    {account.name}
-                  </SelectItem>
-                ))}
+                {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -160,99 +126,87 @@ export function TransactionsPage() {
           <CardTitle>Lista de Transações ({filteredTransactions.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Conta</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredTransactions.map((transaction) => {
-                  const category = getCategory(transaction.categoryId);
-                  const account = getAccount(transaction.accountId);
-                  
-                  return (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        {format(transaction.date, 'dd/MM/yyyy', { locale: ptBR })}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        {transaction.description}
-                      </TableCell>
-                      <TableCell>
-                        {category ? (
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: category.color }}
-                            />
-                            <span>{category.name}</span>
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Descrição</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead>Conta</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredTransactions.map((transaction) => {
+                    const category = getCategory(transaction.categoryId);
+                    const account = getAccount(transaction.accountId);
+                    return (
+                      <TableRow key={transaction.id}>
+                        <TableCell>
+                          {format(transaction.date, 'dd/MM/yyyy', { locale: ptBR })}
+                        </TableCell>
+                        <TableCell className="font-medium">{transaction.description}</TableCell>
+                        <TableCell>
+                          {category ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: category.color }} />
+                              <span>{category.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">{transaction.categoryName || '—'}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {account ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: account.color }} />
+                              <span>{account.name}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>
+                            {transaction.type === 'income' ? 'Receita' : 'Despesa'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={`text-right font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+                          {transaction.type === 'income' ? '+' : '-'}
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(transaction.amount)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end space-x-2">
+                            <Button variant="ghost" size="sm" onClick={() => { setEditingTransaction(transaction); setIsFormOpen(true); }}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => handleDeleteTransaction(transaction.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                        ) : (
-                          <span className="text-gray-400">Categoria não encontrada</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {account ? (
-                          <div className="flex items-center space-x-2">
-                            <div 
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: account.color }}
-                            />
-                            <span>{account.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">Conta não encontrada</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'}>
-                          {transaction.type === 'income' ? 'Receita' : 'Despesa'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${
-                        transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {new Intl.NumberFormat('pt-BR', {
-                          style: 'currency',
-                          currency: 'BRL'
-                        }).format(transaction.amount)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setEditingTransaction(transaction);
-                              setIsFormOpen(true);
-                            }}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteTransaction(transaction.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {filteredTransactions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={7} className="text-center text-gray-400 py-8">
+                        Nenhuma transação encontrada
                       </TableCell>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

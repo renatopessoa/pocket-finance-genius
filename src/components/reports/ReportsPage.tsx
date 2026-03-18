@@ -1,15 +1,14 @@
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Download, FileText, FileSpreadsheet, TrendingUp, TrendingDown } from 'lucide-react';
+import { CalendarIcon, FileText, FileSpreadsheet, TrendingUp, TrendingDown } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
-import { mockTransactions, mockCategories, mockAccounts } from '@/lib/mockData';
+import { useCurrentUser, useTransactions, useCategories, useAccounts } from '@/hooks/use-api';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 
 export function ReportsPage() {
@@ -18,34 +17,29 @@ export function ReportsPage() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedAccount, setSelectedAccount] = useState('');
 
-  const getDateRange = () => {
+  const { data: currentUser } = useCurrentUser();
+  const userId = currentUser?.id;
+  const { data: allTransactions = [] } = useTransactions(userId);
+  const { data: categories = [] } = useCategories();
+  const { data: accounts = [] } = useAccounts(userId);
+
+  const { start, end } = useMemo(() => {
     switch (reportType) {
-      case 'monthly':
-        return {
-          start: startOfMonth(selectedDate),
-          end: endOfMonth(selectedDate)
-        };
       case 'yearly':
-        return {
-          start: startOfYear(selectedDate),
-          end: endOfYear(selectedDate)
-        };
+        return { start: startOfYear(selectedDate), end: endOfYear(selectedDate) };
       default:
-        return {
-          start: startOfMonth(selectedDate),
-          end: endOfMonth(selectedDate)
-        };
+        return { start: startOfMonth(selectedDate), end: endOfMonth(selectedDate) };
     }
-  };
+  }, [reportType, selectedDate]);
 
-  const { start, end } = getDateRange();
+  const transactions = allTransactions;
 
-  const filteredTransactions = mockTransactions.filter(transaction => {
+  const filteredTransactions = transactions.filter(transaction => {
     const transactionDate = transaction.date;
     const isInDateRange = transactionDate >= start && transactionDate <= end;
     const matchesCategory = !selectedCategory || transaction.categoryId === selectedCategory;
     const matchesAccount = !selectedAccount || transaction.accountId === selectedAccount;
-    
+
     return isInDateRange && matchesCategory && matchesAccount;
   });
 
@@ -60,13 +54,13 @@ export function ReportsPage() {
   const balance = totalIncome - totalExpenses;
 
   // Dados para gráficos
-  const expensesByCategory = mockCategories
+  const expensesByCategory = categories
     .filter(c => c.type === 'expense')
     .map(category => {
       const amount = filteredTransactions
         .filter(t => t.type === 'expense' && t.categoryId === category.id)
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       return {
         name: category.name,
         value: amount,
@@ -75,13 +69,13 @@ export function ReportsPage() {
     })
     .filter(item => item.value > 0);
 
-  const incomeByCategory = mockCategories
+  const incomeByCategory = categories
     .filter(c => c.type === 'income')
     .map(category => {
       const amount = filteredTransactions
         .filter(t => t.type === 'income' && t.categoryId === category.id)
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       return {
         name: category.name,
         value: amount,
@@ -91,22 +85,22 @@ export function ReportsPage() {
     .filter(item => item.value > 0);
 
   // Evolução mensal (se for relatório anual)
-  const monthlyEvolution = reportType === 'yearly' ? 
+  const monthlyEvolution = reportType === 'yearly' ?
     Array.from({ length: 12 }, (_, i) => {
       const month = i + 1;
-      const monthTransactions = mockTransactions.filter(t => 
-        t.date.getMonth() + 1 === month && 
+      const monthTransactions = transactions.filter(t =>
+        t.date.getMonth() + 1 === month &&
         t.date.getFullYear() === selectedDate.getFullYear()
       );
-      
+
       const income = monthTransactions
         .filter(t => t.type === 'income')
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       const expenses = monthTransactions
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
-      
+
       return {
         month: new Date(2024, i).toLocaleDateString('pt-BR', { month: 'short' }),
         receitas: income,
@@ -127,11 +121,11 @@ export function ReportsPage() {
       Saldo: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(balance)}
       
       TRANSAÇÕES:
-      ${filteredTransactions.map(t => 
-        `${format(t.date, 'dd/MM/yyyy')} - ${t.description} - ${t.type === 'income' ? '+' : '-'}${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.amount)}`
-      ).join('\n')}
+      ${filteredTransactions.map(t =>
+      `${format(t.date, 'dd/MM/yyyy')} - ${t.description} - ${t.type === 'income' ? '+' : '-'}${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.amount)}`
+    ).join('\n')}
     `;
-    
+
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -146,9 +140,9 @@ export function ReportsPage() {
   const exportToCSV = () => {
     const headers = ['Data', 'Descrição', 'Categoria', 'Conta', 'Tipo', 'Valor'];
     const rows = filteredTransactions.map(t => {
-      const category = mockCategories.find(c => c.id === t.categoryId)?.name || '';
-      const account = mockAccounts.find(a => a.id === t.accountId)?.name || '';
-      
+      const category = categories.find(c => c.id === t.categoryId)?.name || '';
+      const account = accounts.find(a => a.id === t.accountId)?.name || '';
+
       return [
         format(t.date, 'dd/MM/yyyy'),
         t.description,
@@ -158,11 +152,11 @@ export function ReportsPage() {
         t.amount.toString()
       ];
     });
-    
+
     const csvContent = [headers, ...rows]
       .map(row => row.map(field => `"${field}"`).join(','))
       .join('\n');
-    
+
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -236,7 +230,7 @@ export function ReportsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Todas as categorias</SelectItem>
-                  {mockCategories.map(category => (
+                  {categories.map(category => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}
                     </SelectItem>
@@ -252,7 +246,7 @@ export function ReportsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">Todas as contas</SelectItem>
-                  {mockAccounts.map(account => (
+                  {accounts.map(account => (
                     <SelectItem key={account.id} value={account.id}>
                       {account.name}
                     </SelectItem>
@@ -339,7 +333,7 @@ export function ReportsPage() {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => 
+                  <Tooltip formatter={(value) =>
                     new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL'
@@ -363,7 +357,7 @@ export function ReportsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
-                  <Tooltip formatter={(value) => 
+                  <Tooltip formatter={(value) =>
                     new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL'
@@ -388,7 +382,7 @@ export function ReportsPage() {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
                   <YAxis />
-                  <Tooltip formatter={(value) => 
+                  <Tooltip formatter={(value) =>
                     new Intl.NumberFormat('pt-BR', {
                       style: 'currency',
                       currency: 'BRL'
@@ -414,13 +408,13 @@ export function ReportsPage() {
         <CardContent>
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {filteredTransactions.map((transaction) => {
-              const category = mockCategories.find(c => c.id === transaction.categoryId);
-              const account = mockAccounts.find(a => a.id === transaction.accountId);
-              
+              const category = categories.find(c => c.id === transaction.categoryId);
+              const account = accounts.find(a => a.id === transaction.accountId);
+
               return (
                 <div key={transaction.id} className="flex items-center justify-between p-3 rounded-lg border">
                   <div className="flex items-center space-x-3">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full flex items-center justify-center"
                       style={{ backgroundColor: category?.color + '20' }}
                     >
@@ -436,9 +430,8 @@ export function ReportsPage() {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`font-medium ${
-                      transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    <p className={`font-medium ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                      }`}>
                       {transaction.type === 'income' ? '+' : '-'}
                       {new Intl.NumberFormat('pt-BR', {
                         style: 'currency',
