@@ -10,7 +10,6 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Area, AreaChart
 } from 'recharts';
-import { mockTransactions, mockCategories } from '@/lib/mockData';
 import { useCurrentUser, useTransactions, useCategories } from '@/hooks/use-api';
 import { useState, useMemo, useEffect } from 'react';
 import {
@@ -33,12 +32,8 @@ export function ExpenseChart() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   const { data: currentUser } = useCurrentUser();
-  const { data: apiTransactions = [] } = useTransactions(currentUser?.id);
-  const { data: apiCategories = [] } = useCategories();
-
-  // Use API data when available, fall back to mock for initial render
-  const transactions = apiTransactions.length > 0 ? apiTransactions : mockTransactions;
-  const categories = apiCategories.length > 0 ? apiCategories : mockCategories;
+  const { data: transactions = [] } = useTransactions(currentUser?.id);
+  const { data: categories = [] } = useCategories();
 
   // Soft color palettes
   const colorPalettes = {
