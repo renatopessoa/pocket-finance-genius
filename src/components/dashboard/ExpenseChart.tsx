@@ -301,7 +301,7 @@ export function ExpenseChart() {
                     </div>
                     <div className="flex items-center text-xs mb-2">
                       <TrendingUp className="h-3 w-3 text-emerald-500 mr-1" />
-                      <span className="text-emerald-600 font-medium">+5.2%</span>
+                      <span className="text-emerald-600 font-medium"></span>
                       <span className="text-gray-400 ml-1">vs mês anterior</span>
                     </div>
                     <Progress value={75} className="h-1.5 bg-gray-100" />
@@ -332,7 +332,7 @@ export function ExpenseChart() {
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="text-xs text-gray-500 mb-1 font-medium">Maior Categoria</p>
-                        <p className="text-lg font-bold text-gray-800">{pieChartData[0]?.name || 'N/A'}</p>
+                        <p className="text-lg font-bold text-gray-800">{pieChartData[0]?.name || '0'}</p>
                       </div>
                       <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl group-hover:scale-110 transition-transform duration-300">
                         <ArrowUpRight className="h-5 w-5 text-purple-600" />
@@ -346,13 +346,7 @@ export function ExpenseChart() {
                       <span className="text-xs text-purple-600 font-medium">
                         {pieChartData[0]?.percentage}% do total
                       </span>
-                      <Heart
-                        className={`h-3 w-3 cursor-pointer transition-colors ${favorites.includes(pieChartData[0]?.name || '')
-                          ? 'text-red-500 fill-current'
-                          : 'text-gray-400'
-                          }`}
-                        onClick={() => toggleFavorite(pieChartData[0]?.name || '')}
-                      />
+                      
                     </div>
                   </div>
                 </div>
@@ -364,7 +358,7 @@ export function ExpenseChart() {
                       <div>
                         <p className="text-xs text-gray-500 mb-1 font-medium">Média por Categoria</p>
                         <p className="text-lg font-bold text-gray-800">
-                          {formatCurrency(totalExpenses / Object.keys(expensesByCategory).length)}
+                          {formatCurrency(Object.keys(expensesByCategory).length > 0 ? totalExpenses / Object.keys(expensesByCategory).length : 0)}
                         </p>
                       </div>
                       <div className="p-2 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl group-hover:scale-110 transition-transform duration-300">
@@ -373,7 +367,7 @@ export function ExpenseChart() {
                     </div>
                     <div className="flex items-center text-xs mb-2">
                       <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                      <span className="text-amber-600 font-medium">Meta: R$ 500</span>
+                      <span className="text-amber-600 font-medium">Meta: 0</span>
                     </div>
                     <Progress value={65} className="h-1.5 bg-orange-50" />
                   </div>
