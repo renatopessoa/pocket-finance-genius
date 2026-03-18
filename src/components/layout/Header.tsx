@@ -33,7 +33,7 @@ export function Header({ onThemeToggle, isDarkMode }: HeaderProps) {
           <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">F</span>
           </div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Pocket Finance Genius</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Meu Financeiro</h1>
         </div>
       </div>
 

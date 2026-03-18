@@ -77,9 +77,9 @@ export function LoginPage() {
             </div>
           </div>
           <h1 className="text-4xl font-extrabold text-white mb-3 tracking-tight">
-            Pocket Finance
+            Meu
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
-              Genius
+              Financeiro
             </span>
           </h1>
           <p className="text-gray-400 text-lg leading-relaxed">
@@ -113,7 +113,7 @@ export function LoginPage() {
             <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-500 to-blue-600 shadow-lg mr-3">
               <Wallet className="h-7 w-7 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">Pocket Finance Genius</span>
+            <span className="text-2xl font-bold text-white">Meu Financeiro</span>
           </div>
 
           <div className="text-center mb-8">
