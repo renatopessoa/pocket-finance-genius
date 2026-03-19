@@ -147,6 +147,33 @@ export const useCategories = () =>
         staleTime: 5 * 60 * 1000,
     });
 
+export const useCreateCategory = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (data: { name: string; icon?: string; color: string; type: 'income' | 'expense'; budget_limit?: number }) => {
+            const res = await fetch(`${API_URL}/categories`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data),
+            });
+            if (!res.ok) throw new Error('Erro ao criar categoria');
+            return toCategory(await res.json());
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    });
+};
+
+export const useDeleteCategory = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (id: string) => {
+            const res = await fetch(`${API_URL}/categories/${id}`, { method: 'DELETE' });
+            if (!res.ok) throw new Error('Erro ao excluir categoria');
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['categories'] }),
+    });
+};
+
 // ─── TRANSACTIONS ─────────────────────────────────────────────────────────────
 
 export const useTransactions = (userId?: string) =>
