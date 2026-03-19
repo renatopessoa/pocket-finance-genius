@@ -12,7 +12,7 @@ import { CalendarIcon, Plus, X, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useCategories, useAccounts, useCurrentUser, useCreateCategory } from '@/hooks/use-api';
+import { useCategories, useAccounts, useCurrentUser, useCreateCategory, useCreateAccount } from '@/hooks/use-api';
 import { useToast } from '@/components/ui/use-toast';
 
 interface TransactionFormProps {
@@ -43,14 +43,22 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
   const [installmentsCount, setInstallmentsCount] = useState(2);
   const [installmentValue, setInstallmentValue] = useState('');
 
-  // --- New Category mini-form state ---
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState('#3B82F6');
   const [isSavingCat, setIsSavingCat] = useState(false);
 
+  // --- New Account mini-form state ---
+  const [showNewAccount, setShowNewAccount] = useState(false);
+  const [newAccName, setNewAccName] = useState('');
+  const [newAccType, setNewAccType] = useState('checking');
+  const [newAccColor, setNewAccColor] = useState('#3B82F6');
+  const [isSavingAcc, setIsSavingAcc] = useState(false);
+
   const { toast } = useToast();
+  const { data: currentUser } = useCurrentUser();
   const createCategory = useCreateCategory();
+  const createAccount = useCreateAccount(currentUser?.id || '');
 
   useEffect(() => {
     if (transaction) {
@@ -79,6 +87,15 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!formData.accountId) {
+      toast({ title: 'Conta obrigatória', description: 'Selecione ou crie uma conta para a transação.', variant: 'destructive' });
+      return;
+    }
+    if (!formData.categoryId) {
+      toast({ title: 'Categoria obrigatória', description: 'Selecione ou crie uma categoria para a transação.', variant: 'destructive' });
+      return;
+    }
 
     const baseTransaction = {
       ...formData,
@@ -141,7 +158,38 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
     );
   };
 
-  const { data: currentUser } = useCurrentUser();
+  const handleSaveNewAccount = async () => {
+    if (!newAccName.trim()) {
+      toast({ title: 'Nome obrigatório', description: 'Informe o nome da nova conta.', variant: 'destructive' });
+      return;
+    }
+    setIsSavingAcc(true);
+    createAccount.mutate(
+      {
+        name: newAccName.trim(),
+        color: newAccColor,
+        type: newAccType,
+        balance: 0,
+        icon: 'Wallet',
+      },
+      {
+        onSuccess: (saved) => {
+          toast({ title: 'Conta criada!', description: `"${saved.name}" foi adicionada.` });
+          setFormData(prev => ({ ...prev, accountId: saved.id }));
+          setShowNewAccount(false);
+          setNewAccName('');
+          setNewAccType('checking');
+          setNewAccColor('#3B82F6');
+          setIsSavingAcc(false);
+        },
+        onError: () => {
+          toast({ title: 'Erro', description: 'Não foi possível criar a conta.', variant: 'destructive' });
+          setIsSavingAcc(false);
+        },
+      }
+    );
+  };
+
   const { data: allCategories = [] } = useCategories();
   const { data: allAccounts = [] } = useAccounts(currentUser?.id);
 
@@ -319,6 +367,97 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
                 )}
               </SelectContent>
             </Select>
+
+          {/* Botão Nova Conta */}
+          {!showNewAccount && (
+            <button
+              type="button"
+              onClick={() => setShowNewAccount(true)}
+              className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline focus:outline-none"
+            >
+              <Plus className="h-3 w-3" />
+              Nova conta
+            </button>
+          )}
+
+          {/* Mini-form inline */}
+          {showNewAccount && (
+            <div className="mt-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
+              <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                Nova conta
+              </p>
+
+              <div>
+                <Label htmlFor="newAccName" className="text-xs">Nome</Label>
+                <Input
+                  id="newAccName"
+                  placeholder="ex: Conta Corrente, Nubank..."
+                  value={newAccName}
+                  onChange={(e) => setNewAccName(e.target.value)}
+                  className="h-8 text-sm"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="newAccType" className="text-xs">Tipo de Conta</Label>
+                <Select value={newAccType} onValueChange={setNewAccType}>
+                  <SelectTrigger className="h-8 text-sm mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="checking">Conta Corrente</SelectItem>
+                    <SelectItem value="savings">Poupança</SelectItem>
+                    <SelectItem value="credit">Cartão de Crédito</SelectItem>
+                    <SelectItem value="wallet">Carteira</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-xs">Cor</Label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {COLOR_SWATCHES.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setNewAccColor(color)}
+                      className={cn(
+                        'w-6 h-6 rounded-full border-2 transition-transform hover:scale-110',
+                        newAccColor === color ? 'border-foreground scale-110' : 'border-transparent'
+                      )}
+                      style={{ backgroundColor: color }}
+                      title={color}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="h-8 text-xs"
+                  disabled={isSavingAcc || !newAccName.trim()}
+                  onClick={handleSaveNewAccount}
+                >
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                  {isSavingAcc ? 'Salvando...' : 'Salvar'}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 text-xs"
+                  onClick={() => { setShowNewAccount(false); setNewAccName(''); setNewAccColor('#3B82F6'); setNewAccType('checking'); }}
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+
           </div>
         </div>
 
