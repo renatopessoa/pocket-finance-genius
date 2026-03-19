@@ -5,20 +5,18 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
-import { Switch } from '@/components/ui/switch';
+
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Area, AreaChart
 } from 'recharts';
-import { mockTransactions, mockCategories } from '@/lib/mockData';
 import { useCurrentUser, useTransactions, useCategories } from '@/hooks/use-api';
 import { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon,
   LineChartIcon, Filter, Calendar, ArrowUpRight, ArrowDownRight,
-  Eye, EyeOff, Zap, Target, AlertTriangle, Sparkles, Info,
-  ChevronDown, ChevronUp, Palette, Settings, Download,
-  Share2, Heart, Star, Bell, RefreshCw
+  Target, AlertTriangle, Sparkles, Info,
+  Heart, RefreshCw
 } from 'lucide-react';
 
 export function ExpenseChart() {
@@ -27,18 +25,12 @@ export function ExpenseChart() {
   const [isAnimated, setIsAnimated] = useState(true);
   const [hoveredCategory, setHoveredCategory] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-  const [viewMode, setViewMode] = useState<'standard' | 'detailed' | 'minimal'>('standard');
-  const [colorTheme, setColorTheme] = useState<'default' | 'pastel' | 'vibrant'>('pastel');
+  const colorTheme = 'pastel' as const;
   const [favorites, setFavorites] = useState<string[]>([]);
 
   const { data: currentUser } = useCurrentUser();
-  const { data: apiTransactions = [] } = useTransactions(currentUser?.id);
-  const { data: apiCategories = [] } = useCategories();
-
-  // Use API data when available, fall back to mock for initial render
-  const transactions = apiTransactions.length > 0 ? apiTransactions : mockTransactions;
-  const categories = apiCategories.length > 0 ? apiCategories : mockCategories;
+  const { data: transactions = [] } = useTransactions(currentUser?.id);
+  const { data: categories = [] } = useCategories();
 
   // Soft color palettes
   const colorPalettes = {
@@ -223,31 +215,7 @@ export function ExpenseChart() {
 
   return (
     <div className="col-span-1 lg:col-span-2 space-y-6">
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
-        <Button
-          size="sm"
-          className="rounded-full w-12 h-12 shadow-2xl bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-blue-500/25 transition-all duration-300 hover:scale-110"
-          onClick={handleRefresh}
-          disabled={isLoading}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="rounded-full w-12 h-12 shadow-lg bg-white/80 backdrop-blur-sm border-gray-200/50 hover:shadow-xl transition-all duration-300 hover:scale-110"
-        >
-          <Share2 className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          className="rounded-full w-12 h-12 shadow-lg bg-white/80 backdrop-blur-sm border-gray-200/50 hover:shadow-xl transition-all duration-300 hover:scale-110"
-        >
-          <Download className="h-4 w-4" />
-        </Button>
-      </div>
+
 
       <Card className="overflow-hidden border-0 shadow-2xl bg-gradient-to-br from-white via-gray-50/50 to-blue-50/30">
         <CardHeader className="bg-gradient-to-r from-slate-50/80 via-blue-50/50 to-indigo-50/80 backdrop-blur-sm border-b border-gray-100/50">
@@ -274,17 +242,6 @@ export function ExpenseChart() {
             </CardTitle>
 
             <div className="flex items-center gap-3 flex-wrap">
-              {/* Advanced Options Toggle */}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
-                className="text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                <Settings className="h-4 w-4 mr-1" />
-                {showAdvancedOptions ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
-
               {/* Period Selection */}
               <div className="flex items-center gap-1 bg-white/80 backdrop-blur-sm rounded-full p-1 border border-gray-200/50 shadow-sm">
                 <Button
@@ -312,79 +269,10 @@ export function ExpenseChart() {
                   Anual
                 </Button>
               </div>
-
-              {/* Animation Toggle */}
-              {/* <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm rounded-full px-3 py-2 border border-gray-200/50">
-                <Zap className="h-3 w-3 text-yellow-500" />
-                <Switch
-                  checked={isAnimated}
-                  onCheckedChange={setIsAnimated}
-                  className="scale-75"
-                />
-              </div> */}
             </div>
           </div>
 
-          {/* Advanced Options Panel */}
-          {showAdvancedOptions && (
-            <div className="mt-6 p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-200/50 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* View Mode */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                    <Eye className="h-3 w-3" />
-                    Modo de Visualização
-                  </label>
-                  <div className="flex gap-1">
-                    {['minimal', 'standard', 'detailed'].map((mode) => (
-                      <Button
-                        key={mode}
-                        variant={viewMode === mode ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setViewMode(mode as any)}
-                        className="text-xs capitalize"
-                      >
-                        {mode}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Color Theme */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                    <Palette className="h-3 w-3" />
-                    Tema de Cores
-                  </label>
-                  <div className="flex gap-1">
-                    {Object.keys(colorPalettes).map((theme) => (
-                      <Button
-                        key={theme}
-                        variant={colorTheme === theme ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setColorTheme(theme as any)}
-                        className="text-xs capitalize"
-                      >
-                        {theme === 'default' ? 'padrão' : theme}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Notifications */}
-                <div className="space-y-2">
-                  <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
-                    <Bell className="h-3 w-3" />
-                    Notificações
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <Switch className="scale-75" />
-                    <span className="text-xs text-gray-500">Alertas de gastos</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Enhanced Statistics Cards with Skeleton Loading */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -413,7 +301,7 @@ export function ExpenseChart() {
                     </div>
                     <div className="flex items-center text-xs mb-2">
                       <TrendingUp className="h-3 w-3 text-emerald-500 mr-1" />
-                      <span className="text-emerald-600 font-medium">+5.2%</span>
+                      <span className="text-emerald-600 font-medium"></span>
                       <span className="text-gray-400 ml-1">vs mês anterior</span>
                     </div>
                     <Progress value={75} className="h-1.5 bg-gray-100" />
@@ -444,7 +332,7 @@ export function ExpenseChart() {
                     <div className="flex items-center justify-between mb-3">
                       <div>
                         <p className="text-xs text-gray-500 mb-1 font-medium">Maior Categoria</p>
-                        <p className="text-lg font-bold text-gray-800">{pieChartData[0]?.name || 'N/A'}</p>
+                        <p className="text-lg font-bold text-gray-800">{pieChartData[0]?.name || '0'}</p>
                       </div>
                       <div className="p-2 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl group-hover:scale-110 transition-transform duration-300">
                         <ArrowUpRight className="h-5 w-5 text-purple-600" />
@@ -458,13 +346,7 @@ export function ExpenseChart() {
                       <span className="text-xs text-purple-600 font-medium">
                         {pieChartData[0]?.percentage}% do total
                       </span>
-                      <Heart
-                        className={`h-3 w-3 cursor-pointer transition-colors ${favorites.includes(pieChartData[0]?.name || '')
-                          ? 'text-red-500 fill-current'
-                          : 'text-gray-400'
-                          }`}
-                        onClick={() => toggleFavorite(pieChartData[0]?.name || '')}
-                      />
+                      
                     </div>
                   </div>
                 </div>
@@ -476,7 +358,7 @@ export function ExpenseChart() {
                       <div>
                         <p className="text-xs text-gray-500 mb-1 font-medium">Média por Categoria</p>
                         <p className="text-lg font-bold text-gray-800">
-                          {formatCurrency(totalExpenses / Object.keys(expensesByCategory).length)}
+                          {formatCurrency(Object.keys(expensesByCategory).length > 0 ? totalExpenses / Object.keys(expensesByCategory).length : 0)}
                         </p>
                       </div>
                       <div className="p-2 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl group-hover:scale-110 transition-transform duration-300">
@@ -485,7 +367,7 @@ export function ExpenseChart() {
                     </div>
                     <div className="flex items-center text-xs mb-2">
                       <AlertTriangle className="h-3 w-3 text-amber-500 mr-1" />
-                      <span className="text-amber-600 font-medium">Meta: R$ 500</span>
+                      <span className="text-amber-600 font-medium">Meta: 0</span>
                     </div>
                     <Progress value={65} className="h-1.5 bg-orange-50" />
                   </div>
