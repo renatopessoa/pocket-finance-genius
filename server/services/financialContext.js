@@ -162,6 +162,31 @@ export async function predictBudgetBursts(userId, month, year) {
 }
 
 /**
+ * RF3.2 — Upcoming bills alert.
+ * Returns pending/overdue bills within the next `daysAhead` days (default 7).
+ */
+export async function getUpcomingBills(userId, daysAhead = 7) {
+    const today = new Date();
+    const limit = new Date(today);
+    limit.setDate(limit.getDate() + daysAhead);
+
+    const result = await pool.query(
+        `SELECT b.id, b.title, b.description, b.amount,
+                b.due_date::date AS due_date,
+                b.status, b.recurring, b.recurrence,
+                c.name AS category
+         FROM pfg_bills b
+         LEFT JOIN pfg_categories c ON b.category_id = c.id
+         WHERE b.user_id = $1
+           AND b.status IN ('pending', 'overdue')
+           AND b.due_date <= $2
+         ORDER BY b.due_date ASC`,
+        [userId, limit.toISOString().split('T')[0]]
+    );
+    return result.rows;
+}
+
+/**
  * RF3.3 — Goal projection.
  * Calculates required monthly deposit vs current pace and risk assessment.
  */

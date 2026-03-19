@@ -9,6 +9,7 @@ import {
     getSpendingByCategory,
     predictBudgetBursts,
     projectGoals,
+    getUpcomingBills,
 } from '../services/financialContext.js';
 
 const router = Router();
@@ -23,10 +24,11 @@ async function buildFinancialSnapshot(userId, today) {
     const firstOfMonth = new Date(year, today.getMonth(), 1).toISOString().split('T')[0];
     const todayStr = today.toISOString().split('T')[0];
 
-    const [accounts, budgetPredictions, goalProjections] = await Promise.all([
+    const [accounts, budgetPredictions, goalProjections, upcomingBills] = await Promise.all([
         getAccountBalances(userId),
         predictBudgetBursts(userId, month, year),
         projectGoals(userId),
+        getUpcomingBills(userId, 7),
     ]);
 
     const lines = [];
@@ -52,6 +54,19 @@ async function buildFinancialSnapshot(userId, today) {
         lines.push(`🟢 **Orçamentos:** ${budgetPredictions.length} ativo(s), todos dentro do limite.`);
     } else if (!budgetPredictions.length) {
         lines.push('**Orçamentos:** nenhum orçamento definido para este mês.');
+    }
+
+    // 3.2: Upcoming bills
+    const overdue = upcomingBills.filter(b => b.status === 'overdue');
+    const dueSoon = upcomingBills.filter(b => b.status === 'pending');
+    if (overdue.length) {
+        lines.push(`🔴 **Contas VENCIDAS:** ${overdue.map(b => `${b.title} — R$ ${parseFloat(b.amount).toFixed(2)} (venceu ${new Date(b.due_date).toLocaleDateString('pt-BR')})`).join('; ')}`);
+    }
+    if (dueSoon.length) {
+        lines.push(`🟡 **Contas a vencer (7 dias):** ${dueSoon.map(b => `${b.title} — R$ ${parseFloat(b.amount).toFixed(2)} (${new Date(b.due_date).toLocaleDateString('pt-BR')})`).join('; ')}`);
+    }
+    if (!overdue.length && !dueSoon.length) {
+        lines.push('🟢 **Contas a pagar:** nenhuma pendente nos próximos 7 dias.');
     }
 
     // 3.3: Goal projections
@@ -210,6 +225,20 @@ const tools = [
             parameters: { type: 'object', properties: {}, required: [] },
         },
     },
+    {
+        type: 'function',
+        function: {
+            name: 'get_upcoming_bills',
+            description: 'Retorna contas a pagar pendentes ou vencidas do usuário nos próximos N dias. Use para alertar sobre pagamentos futuros e vencimentos próximos.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    days_ahead: { type: 'integer', description: 'Quantos dias à frente verificar (padrão: 7, máximo recomendado: 30)' },
+                },
+                required: [],
+            },
+        },
+    },
 ];
 
 // ── Tool executor ─────────────────────────────────────────────────────────────
@@ -251,6 +280,11 @@ async function executeTool(name, args, userId) {
 
         case 'project_goals':
             return await projectGoals(userId);
+
+        case 'get_upcoming_bills': {
+            const { days_ahead = 7 } = args;
+            return await getUpcomingBills(userId, days_ahead);
+        }
 
         default:
             return { error: `Função desconhecida: ${name}` };
