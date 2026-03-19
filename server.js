@@ -17,6 +17,7 @@ import budgetsRoutes from './server/routes/budgets.js';
 import educationalRoutes from './server/routes/educational.js';
 import aiRoutes from './server/routes/ai.js';
 import billsRoutes from './server/routes/bills.js';
+import alertsRoutes from './server/routes/alerts.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +58,7 @@ app.use('/api/budgets', budgetsRoutes);
 app.use('/api/educational-content', educationalRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/bills', billsRoutes);
+app.use('/api/alerts', alertsRoutes);
 
 // ── Seed: categorias padrão ──
 async function seedCategories() {

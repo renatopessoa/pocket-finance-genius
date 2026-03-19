@@ -120,8 +120,8 @@ const Index = () => {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col min-h-screen">
-          <Header onThemeToggle={toggleTheme} isDarkMode={isDarkMode} />
-          
+          <Header onThemeToggle={toggleTheme} isDarkMode={isDarkMode} onTabChange={setActiveTab} />
+
           <main className="flex-1 p-6">
             <ErrorBoundary key={activeTab}>
               {renderContent()}

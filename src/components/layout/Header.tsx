@@ -1,25 +1,25 @@
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
+  DropdownMenuSeparator,
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Moon, Sun, Bell, Settings, LogOut, User } from 'lucide-react';
+import { Moon, Sun, Settings, LogOut, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { NotificationBell } from './NotificationBell';
 
 interface HeaderProps {
   onThemeToggle: () => void;
   isDarkMode: boolean;
+  onTabChange: (tab: string) => void;
 }
 
-export function Header({ onThemeToggle, isDarkMode }: HeaderProps) {
-  const [notifications] = useState(0);
+export function Header({ onThemeToggle, isDarkMode, onTabChange }: HeaderProps) {
   const { currentUser, logout } = useAuth();
 
   const initials = currentUser?.name
@@ -42,14 +42,7 @@ export function Header({ onThemeToggle, isDarkMode }: HeaderProps) {
           {isDarkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </Button>
 
-        <Button variant="ghost" size="sm" className="relative">
-          <Bell className="h-4 w-4" />
-          {notifications > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-              {notifications}
-            </span>
-          )}
-        </Button>
+        <NotificationBell onTabChange={onTabChange} />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

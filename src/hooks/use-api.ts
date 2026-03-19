@@ -324,6 +324,28 @@ export const useDeleteBudget = () => {
     });
 };
 
+// ─── ALERTS ───────────────────────────────────────────────────────────────────
+
+export interface AppAlert {
+    id: string;
+    type: 'budget' | 'bill' | 'goal';
+    severity: 'warning' | 'critical';
+    message: string;
+    tab: string;
+}
+
+export const useAlerts = () =>
+    useQuery({
+        queryKey: ['alerts'],
+        queryFn: async (): Promise<AppAlert[]> => {
+            const res = await fetch(`${API_URL}/alerts`, { headers: getAuthHeaders() });
+            if (!res.ok) throw new Error('Erro ao buscar alertas');
+            return res.json();
+        },
+        refetchInterval: 5 * 60 * 1000, // atualiza a cada 5 minutos
+        staleTime: 2 * 60 * 1000,
+    });
+
 /* ── EDUCATIONAL CONTENT ── */
 const toEducationalContent = (row: any) => ({
     id: row.id as string,
