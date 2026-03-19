@@ -92,8 +92,12 @@ const FEW_SHOT_EXAMPLES = `
 ## Exemplos de Interação
 
 **Usuário:** Quanto gastei em alimentação este mês?
-**Assistente:** Vou verificar suas transações de março. *(chama get_spending_by_category)*
+**Assistente:** Vou verificar suas transações de março. *(chama get_spending_by_category com start_date=2026-03-01, end_date=2026-03-31)*
 Com base nos seus dados: você gastou **R$ 850,00** em Alimentação em março de 2026, distribuídos em 12 transações. Isso representa **85%** do seu orçamento de R$ 1.000,00 para essa categoria — atenção, pois ainda restam 12 dias no mês!
+
+**Usuário:** Quanto gastei em abril?
+**Assistente:** Abril ainda não ocorreu em 2026, então vou buscar **abril de 2025**. *(chama get_spending_by_category com start_date=2025-04-01, end_date=2025-04-30)*
+Em abril de 2025, seus gastos foram: Alimentação R$ 720,00, Transporte R$ 310,00, Lazer R$ 190,00. Total: **R$ 1.220,00**.
 
 **Usuário:** Meus orçamentos estão bem?
 **Assistente:** *(chama get_budget_summary)* De acordo com seus orçamentos de março:
@@ -132,6 +136,7 @@ Sua função principal é fornecer análises personalizadas baseadas nos dados r
 - Formate respostas com listas e **negrito** em markdown quando útil.
 - Valores sempre em reais (R$).
 - Seja direto: máximo 300 palavras por resposta.
+- **Regra de datas CRÍTICA:** Quando o usuário mencionar um mês que ainda não ocorreu no ano atual (ex: hoje é março/2026 e ele pergunta sobre abril, maio etc.), interprete sempre como o mesmo mês do ANO ANTERIOR. Exemplo: "gastos de abril" = abril/2025 (start_date=2025-04-01, end_date=2025-04-30). Só use o ano futuro se o usuário especificar explicitamente o ano.
 
 **Data de hoje:** {CURRENT_DATE}
 
@@ -242,6 +247,17 @@ const tools = [
 ];
 
 // ── Tool executor ─────────────────────────────────────────────────────────────
+// Safety: if dates are in the future, shift them 1 year back (user likely means past data)
+function normalizeDateRange(startDate, endDate) {
+    const today = new Date().toISOString().split('T')[0];
+    if (startDate > today) {
+        // Both dates are in the future — shift 1 year back
+        const shiftYear = (d) => d.replace(/^(\d{4})/, (y) => String(parseInt(y) - 1));
+        return { start_date: shiftYear(startDate), end_date: shiftYear(endDate) };
+    }
+    return { start_date: startDate, end_date: endDate };
+}
+
 async function executeTool(name, args, userId) {
     const today = new Date();
     const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1)
@@ -256,7 +272,8 @@ async function executeTool(name, args, userId) {
             return await getAccountBalances(userId);
 
         case 'get_transactions': {
-            const { start_date = firstOfMonth, end_date = endOfMonth } = args;
+            const raw = { start_date: args.start_date ?? firstOfMonth, end_date: args.end_date ?? endOfMonth };
+            const { start_date, end_date } = normalizeDateRange(raw.start_date, raw.end_date);
             return await getTransactionsByPeriod(userId, start_date, end_date);
         }
 
@@ -269,7 +286,8 @@ async function executeTool(name, args, userId) {
             return await getGoals(userId);
 
         case 'get_spending_by_category': {
-            const { start_date = firstOfMonth, end_date = endOfMonth } = args;
+            const raw = { start_date: args.start_date ?? firstOfMonth, end_date: args.end_date ?? endOfMonth };
+            const { start_date, end_date } = normalizeDateRange(raw.start_date, raw.end_date);
             return await getSpendingByCategory(userId, start_date, end_date);
         }
 
