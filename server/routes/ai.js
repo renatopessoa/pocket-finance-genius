@@ -7,6 +7,8 @@ import {
     getBudgetSummary,
     getGoals,
     getSpendingByCategory,
+    predictBudgetBursts,
+    projectGoals,
 } from '../services/financialContext.js';
 
 const router = Router();
@@ -21,10 +23,10 @@ async function buildFinancialSnapshot(userId, today) {
     const firstOfMonth = new Date(year, today.getMonth(), 1).toISOString().split('T')[0];
     const todayStr = today.toISOString().split('T')[0];
 
-    const [accounts, budgets, goals] = await Promise.all([
+    const [accounts, budgetPredictions, goalProjections] = await Promise.all([
         getAccountBalances(userId),
-        getBudgetSummary(userId, month, year),
-        getGoals(userId),
+        predictBudgetBursts(userId, month, year),
+        projectGoals(userId),
     ]);
 
     const lines = [];
@@ -37,28 +39,33 @@ async function buildFinancialSnapshot(userId, today) {
         lines.push('**Contas:** nenhuma conta cadastrada.');
     }
 
-    // Budgets at risk (>= 75% used) or already exceeded
-    const atRisk = budgets.filter(b => parseFloat(b.percent_used ?? 0) >= 75);
-    if (atRisk.length) {
-        lines.push(`**Orçamentos em alerta:** ${atRisk.map(b => `${b.category} (${b.percent_used}% de R$ ${parseFloat(b.budget_amount).toFixed(2)} usados)`).join('; ')}`);
-    } else if (budgets.length) {
-        lines.push(`**Orçamentos:** ${budgets.length} ativo(s), nenhum em risco de estouro.`);
-    } else {
+    // 3.1: Budget burst predictions
+    const critical = budgetPredictions.filter(b => b.status === 'estourado' || b.status === 'risco_estouro');
+    const warning = budgetPredictions.filter(b => b.status === 'atenção');
+    if (critical.length) {
+        lines.push(`🔴 **Orçamentos CRÍTICOS:** ${critical.map(b => `${b.category} — ${b.percent_used}% usado, projeção ${b.projected_percent}% no fim do mês (pode gastar R$ ${b.daily_allowance}/dia nos próximos ${b.days_left} dias)`).join('; ')}`);
+    }
+    if (warning.length) {
+        lines.push(`🟡 **Orçamentos em atenção:** ${warning.map(b => `${b.category} — ${b.percent_used}% usado, projeção ${b.projected_percent}% (R$ ${b.daily_allowance}/dia restantes)`).join('; ')}`);
+    }
+    if (!critical.length && !warning.length && budgetPredictions.length) {
+        lines.push(`🟢 **Orçamentos:** ${budgetPredictions.length} ativo(s), todos dentro do limite.`);
+    } else if (!budgetPredictions.length) {
         lines.push('**Orçamentos:** nenhum orçamento definido para este mês.');
     }
 
-    // Goals behind schedule or near deadline (< 50% progress with deadline ≤ 90 days)
-    const today90 = new Date(today); today90.setDate(today90.getDate() + 90);
-    const urgentGoals = goals.filter(g => {
-        const deadline = new Date(g.deadline);
-        const progress = parseFloat(g.progress_percent ?? 0);
-        return deadline <= today90 && progress < 80;
-    });
-    if (urgentGoals.length) {
-        lines.push(`**Metas com atenção:** ${urgentGoals.map(g => `${g.title} (${g.progress_percent}% — prazo: ${g.deadline})`).join('; ')}`);
-    } else if (goals.length) {
-        lines.push(`**Metas:** ${goals.length} meta(s) ativa(s), todas dentro do prazo.`);
-    } else {
+    // 3.3: Goal projections
+    const goalsAtRisk = goalProjections.filter(g => g.risk === 'risco_alto' || g.risk === 'prazo_vencido');
+    const goalsAttention = goalProjections.filter(g => g.risk === 'atenção');
+    if (goalsAtRisk.length) {
+        lines.push(`🔴 **Metas em RISCO:** ${goalsAtRisk.map(g => `${g.title} — ${g.progress_percent}% (precisa R$ ${g.required_monthly}/mês, ritmo atual R$ ${g.actual_monthly_pace}/mês, ${g.months_left} meses restantes)`).join('; ')}`);
+    }
+    if (goalsAttention.length) {
+        lines.push(`🟡 **Metas com atenção:** ${goalsAttention.map(g => `${g.title} — ${g.progress_percent}% (precisa R$ ${g.required_monthly}/mês vs ritmo R$ ${g.actual_monthly_pace}/mês)`).join('; ')}`);
+    }
+    if (!goalsAtRisk.length && !goalsAttention.length && goalProjections.length) {
+        lines.push(`🟢 **Metas:** ${goalProjections.length} meta(s) ativa(s), todas no caminho.`);
+    } else if (!goalProjections.length) {
         lines.push('**Metas:** nenhuma meta cadastrada.');
     }
 
@@ -103,7 +110,9 @@ Sua função principal é fornecer análises personalizadas baseadas nos dados r
 **Regras de comportamento:**
 - Sempre use dados reais antes de dar recomendações financeiras.
 - Ao identificar orçamentos acima de 75% de uso, alerte proativamente.
-- Ao identificar metas com menos de 50% de progresso e prazo próximo (< 90 dias), alerte e sugira ajustes.
+- Use predict_budget_bursts para alertas detalhados sobre previsão de estouro, mostrando o limite diário restante.
+- Use project_goals para avaliar se as metas estão no caminho, mostrando o ritmo necessário vs atual.
+- Ao identificar metas com risco_alto, sugira ajustes concretos (ex: aumentar Aporte mensal em R$ X).
 - Use emojis moderadamente para destacar alertas (🔴 crítico, 🟡 atenção, 🟢 ok).
 - Formate respostas com listas e **negrito** em markdown quando útil.
 - Valores sempre em reais (R$).
@@ -178,6 +187,29 @@ const tools = [
             },
         },
     },
+    {
+        type: 'function',
+        function: {
+            name: 'predict_budget_bursts',
+            description: 'Prevê quais categorias de orçamento podem estourar até o fim do mês. Retorna projeções de gasto, status de risco e limite diário restante para cada categoria.',
+            parameters: {
+                type: 'object',
+                properties: {
+                    month: { type: 'integer', description: 'Mês (1-12)' },
+                    year: { type: 'integer', description: 'Ano com 4 dígitos' },
+                },
+                required: ['month', 'year'],
+            },
+        },
+    },
+    {
+        type: 'function',
+        function: {
+            name: 'project_goals',
+            description: 'Projeta o progresso de todas as metas financeiras do usuário. Calcula ritmo necessário vs real, valor projetado final e nível de risco (no_caminho, atenção, risco_alto, prazo_vencido, atingida).',
+            parameters: { type: 'object', properties: {}, required: [] },
+        },
+    },
 ];
 
 // ── Tool executor ─────────────────────────────────────────────────────────────
@@ -212,9 +244,141 @@ async function executeTool(name, args, userId) {
             return await getSpendingByCategory(userId, start_date, end_date);
         }
 
+        case 'predict_budget_bursts': {
+            const { month = today.getMonth() + 1, year = today.getFullYear() } = args;
+            return await predictBudgetBursts(userId, month, year);
+        }
+
+        case 'project_goals':
+            return await projectGoals(userId);
+
         default:
             return { error: `Função desconhecida: ${name}` };
     }
+}
+
+// ── 4.1/4.2: Build visualization from tool results ────────────────────────────
+function buildVisualization(toolCallsWithResults) {
+    const fmtBRL = (v) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(parseFloat(v) || 0);
+
+    // Priority order: most visual-friendly first
+    const priority = [
+        'get_spending_by_category',
+        'predict_budget_bursts',
+        'get_budget_summary',
+        'get_account_balances',
+        'project_goals',
+        'get_goals',
+        'get_transactions',
+    ];
+
+    let best = null;
+    for (const name of priority) {
+        best = toolCallsWithResults.find(
+            (t) => t.name === name && Array.isArray(t.result) && t.result.length > 0
+        );
+        if (best) break;
+    }
+    if (!best) return null;
+
+    const { name, result } = best;
+
+    if (name === 'get_spending_by_category') {
+        return {
+            type: 'pie',
+            title: 'Gastos por Categoria',
+            data: result
+                .map((r) => ({ name: r.category || 'Sem categoria', value: parseFloat(r.total) || 0 }))
+                .filter((d) => d.value > 0),
+        };
+    }
+
+    if (name === 'predict_budget_bursts') {
+        return {
+            type: 'bar',
+            title: 'Previsão de Orçamentos (%)',
+            data: result.map((r) => ({
+                name: r.category,
+                'Utilizado (%)': parseFloat(r.percent_used) || 0,
+                'Projetado (%)': Math.min(parseFloat(r.projected_percent) || 0, 150),
+            })),
+            config: { xKey: 'name', bars: ['Utilizado (%)', 'Projetado (%)'] },
+        };
+    }
+
+    if (name === 'get_budget_summary') {
+        return {
+            type: 'bar',
+            title: 'Orçamentos do Mês',
+            data: result.map((r) => ({
+                name: r.category,
+                Orçado: parseFloat(r.budget_amount) || 0,
+                Gasto: parseFloat(r.spent) || 0,
+            })),
+            config: { xKey: 'name', bars: ['Orçado', 'Gasto'] },
+        };
+    }
+
+    if (name === 'get_account_balances') {
+        return {
+            type: 'table',
+            title: 'Saldos das Contas',
+            columns: ['Conta', 'Tipo', 'Saldo'],
+            data: result.map((r) => [r.name, r.type, fmtBRL(r.balance)]),
+        };
+    }
+
+    if (name === 'project_goals') {
+        const riskLabel = (r) =>
+            r === 'no_caminho' ? '🟢 No caminho'
+                : r === 'atenção' ? '🟡 Atenção'
+                    : r === 'risco_alto' ? '🔴 Risco alto'
+                        : r === 'prazo_vencido' ? '🔴 Vencida'
+                            : r === 'atingida' ? '✅ Atingida'
+                                : r;
+        return {
+            type: 'table',
+            title: 'Projeção de Metas',
+            columns: ['Meta', 'Progresso', 'Ritmo Necessário/mês', 'Status'],
+            data: result.map((r) => [
+                r.title,
+                `${r.progress_percent}%`,
+                fmtBRL(r.required_monthly),
+                riskLabel(r.risk),
+            ]),
+        };
+    }
+
+    if (name === 'get_goals') {
+        return {
+            type: 'table',
+            title: 'Metas Financeiras',
+            columns: ['Meta', 'Atual', 'Alvo', 'Progresso'],
+            data: result.map((r) => [
+                r.title,
+                fmtBRL(r.current_amount),
+                fmtBRL(r.target_amount),
+                `${parseFloat(r.progress_percent || 0).toFixed(0)}%`,
+            ]),
+        };
+    }
+
+    if (name === 'get_transactions') {
+        return {
+            type: 'table',
+            title: 'Transações Recentes',
+            columns: ['Data', 'Descrição', 'Categoria', 'Valor'],
+            data: result.slice(0, 10).map((r) => [
+                new Date(r.date).toLocaleDateString('pt-BR'),
+                r.description || '-',
+                r.category || '-',
+                fmtBRL(r.amount),
+            ]),
+        };
+    }
+
+    return null;
 }
 
 // ── POST /chat ────────────────────────────────────────────────────────────────
@@ -248,6 +412,7 @@ router.post('/chat', async (req, res) => {
         // Tool-calling loop — max 5 iterations to prevent runaway calls
         let iterations = 0;
         let responseMessage;
+        const toolCallsWithResults = []; // 4.1/4.2: track results for visualization
 
         while (iterations < 5) {
             const completion = await openai.chat.completions.create({
@@ -275,6 +440,7 @@ router.post('/chat', async (req, res) => {
                         // malformed JSON — proceed with empty args
                     }
                     const toolResult = await executeTool(toolName, toolArgs, userId);
+                    toolCallsWithResults.push({ name: toolName, result: toolResult });
                     messages.push({
                         role: 'tool',
                         tool_call_id: toolCall.id,
@@ -289,7 +455,10 @@ router.post('/chat', async (req, res) => {
         const response = responseMessage?.content ||
             'Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.';
 
-        res.json({ response });
+        // 4.1/4.2: attach visualization if any tool returned chart-worthy data
+        const visualization = buildVisualization(toolCallsWithResults);
+
+        res.json({ response, ...(visualization ? { visualization } : {}) });
     } catch (err) {
         console.error('Erro na API de IA:', err);
         res.status(500).json({ error: 'Erro ao processar solicitação de IA' });

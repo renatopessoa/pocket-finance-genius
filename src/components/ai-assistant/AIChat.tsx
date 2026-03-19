@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Send, Bot, User, Lightbulb, Database } from 'lucide-react';
+import { ChatVisualization, type Visualization } from './ChatVisualization';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -13,6 +14,7 @@ interface Message {
   content: string;
   isUser: boolean;
   timestamp: Date;
+  visualization?: Visualization;
 }
 
 /** Very light markdown renderer: bold and unordered lists. */
@@ -103,7 +105,8 @@ export function AIChat() {
         id: (Date.now() + 1).toString(),
         content: aiResponseContent,
         isUser: false,
-        timestamp: new Date()
+        timestamp: new Date(),
+        ...(res.ok && data.visualization ? { visualization: data.visualization } : {}),
       };
 
       setMessages(prev => [...prev, aiResponse]);
@@ -178,15 +181,20 @@ export function AIChat() {
                       )}
                     </Avatar>
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.isUser
-                        ? 'bg-blue-600 text-white ml-auto'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
+                      className={`px-4 py-2 rounded-lg ${message.isUser
+                          ? 'max-w-xs lg:max-w-md bg-blue-600 text-white ml-auto'
+                          : 'w-full max-w-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                         }`}
                     >
                       {message.isUser ? (
                         <p className="text-sm">{message.content}</p>
                       ) : (
-                        <div className="text-sm">{renderMarkdown(message.content)}</div>
+                        <>
+                          <div className="text-sm">{renderMarkdown(message.content)}</div>
+                          {message.visualization && (
+                            <ChatVisualization viz={message.visualization} />
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
