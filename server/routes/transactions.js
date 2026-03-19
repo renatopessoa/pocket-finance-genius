@@ -1,12 +1,13 @@
 import { Router } from 'express';
 import pool from '../db.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
+router.use(authenticateToken);
 
 router.get('/', async (req, res) => {
     try {
-        const { user_id } = req.query;
-        if (!user_id) return res.status(400).json({ error: 'user_id obrigatório' });
+        const user_id = req.user.id;
         const result = await pool.query(
             `SELECT t.*, c.name AS category_name, c.color AS category_color, c.icon AS category_icon
              FROM pfg_transactions t
@@ -31,7 +32,8 @@ router.post('/', async (req, res) => {
         await client.query('BEGIN');
         const results = [];
         for (const item of items) {
-            const { amount, description, date, type, category_id, account_id, user_id, recurring, tags } = item;
+            const { amount, description, date, type, category_id, account_id, recurring, tags } = item;
+            const user_id = req.user.id;
             const result = await client.query(
                 'INSERT INTO pfg_transactions (amount, description, date, type, category_id, account_id, user_id, recurring, tags) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *',
                 [amount, description, date, type, category_id, account_id, user_id, recurring ?? false, tags ?? []]
@@ -62,9 +64,10 @@ router.put('/:id', async (req, res) => {
         const { id } = req.params;
         const { amount, description, date, type, category_id, account_id, recurring, tags } = req.body;
 
-        // Busca transação anterior para reverter o saldo
-        const old = await client.query('SELECT amount, type, account_id FROM pfg_transactions WHERE id = $1', [id]);
+        // Busca transação anterior para reverter o saldo — verifica ownership
+        const old = await client.query('SELECT amount, type, account_id, user_id FROM pfg_transactions WHERE id = $1', [id]);
         if (old.rows.length === 0) return res.status(404).json({ error: 'Transação não encontrada' });
+        if (old.rows[0].user_id !== req.user.id) return res.status(403).json({ error: 'Acesso negado' });
 
         await client.query('BEGIN');
 
@@ -97,9 +100,10 @@ router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Busca transação para reverter o saldo
-        const old = await client.query('SELECT amount, type, account_id FROM pfg_transactions WHERE id = $1', [id]);
+        // Busca transação para reverter o saldo — verifica ownership
+        const old = await client.query('SELECT amount, type, account_id, user_id FROM pfg_transactions WHERE id = $1', [id]);
         if (old.rows.length === 0) return res.status(404).json({ error: 'Transação não encontrada' });
+        if (old.rows[0].user_id !== req.user.id) return res.status(403).json({ error: 'Acesso negado' });
 
         await client.query('BEGIN');
         // Reverte o efeito no saldo da conta

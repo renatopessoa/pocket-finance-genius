@@ -12,7 +12,7 @@ import { CalendarIcon, Plus, X, CheckCircle2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useCategories, useAccounts, useCurrentUser, useCreateCategory, useCreateAccount } from '@/hooks/use-api';
+import { useCategories, useAccounts, useCreateCategory, useCreateAccount } from '@/hooks/use-api';
 import { useToast } from '@/components/ui/use-toast';
 
 interface TransactionFormProps {
@@ -56,9 +56,8 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
   const [isSavingAcc, setIsSavingAcc] = useState(false);
 
   const { toast } = useToast();
-  const { data: currentUser } = useCurrentUser();
   const createCategory = useCreateCategory();
-  const createAccount = useCreateAccount(currentUser?.id || '');
+  const createAccount = useCreateAccount();
 
   useEffect(() => {
     if (transaction) {
@@ -191,7 +190,7 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
   };
 
   const { data: allCategories = [] } = useCategories();
-  const { data: allAccounts = [] } = useAccounts(currentUser?.id);
+  const { data: allAccounts = [] } = useAccounts();
 
   const filteredCategories = allCategories.filter(c => c.type === formData.type);
   const validAccounts = allAccounts;
@@ -368,95 +367,95 @@ export function TransactionForm({ transaction, onSubmit, onCancel }: Transaction
               </SelectContent>
             </Select>
 
-          {/* Botão Nova Conta */}
-          {!showNewAccount && (
-            <button
-              type="button"
-              onClick={() => setShowNewAccount(true)}
-              className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline focus:outline-none"
-            >
-              <Plus className="h-3 w-3" />
-              Nova conta
-            </button>
-          )}
-
-          {/* Mini-form inline */}
-          {showNewAccount && (
-            <div className="mt-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+            {/* Botão Nova Conta */}
+            {!showNewAccount && (
+              <button
+                type="button"
+                onClick={() => setShowNewAccount(true)}
+                className="mt-2 flex items-center gap-1 text-xs text-primary hover:underline focus:outline-none"
+              >
+                <Plus className="h-3 w-3" />
                 Nova conta
-              </p>
+              </button>
+            )}
 
-              <div>
-                <Label htmlFor="newAccName" className="text-xs">Nome</Label>
-                <Input
-                  id="newAccName"
-                  placeholder="ex: Conta Corrente, Nubank..."
-                  value={newAccName}
-                  onChange={(e) => setNewAccName(e.target.value)}
-                  className="h-8 text-sm"
-                  autoFocus
-                />
-              </div>
+            {/* Mini-form inline */}
+            {showNewAccount && (
+              <div className="mt-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 space-y-3">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide">
+                  Nova conta
+                </p>
 
-              <div>
-                <Label htmlFor="newAccType" className="text-xs">Tipo de Conta</Label>
-                <Select value={newAccType} onValueChange={setNewAccType}>
-                  <SelectTrigger className="h-8 text-sm mt-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="checking">Conta Corrente</SelectItem>
-                    <SelectItem value="savings">Poupança</SelectItem>
-                    <SelectItem value="credit">Cartão de Crédito</SelectItem>
-                    <SelectItem value="wallet">Carteira</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <div>
+                  <Label htmlFor="newAccName" className="text-xs">Nome</Label>
+                  <Input
+                    id="newAccName"
+                    placeholder="ex: Conta Corrente, Nubank..."
+                    value={newAccName}
+                    onChange={(e) => setNewAccName(e.target.value)}
+                    className="h-8 text-sm"
+                    autoFocus
+                  />
+                </div>
 
-              <div>
-                <Label className="text-xs">Cor</Label>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  {COLOR_SWATCHES.map((color) => (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => setNewAccColor(color)}
-                      className={cn(
-                        'w-6 h-6 rounded-full border-2 transition-transform hover:scale-110',
-                        newAccColor === color ? 'border-foreground scale-110' : 'border-transparent'
-                      )}
-                      style={{ backgroundColor: color }}
-                      title={color}
-                    />
-                  ))}
+                <div>
+                  <Label htmlFor="newAccType" className="text-xs">Tipo de Conta</Label>
+                  <Select value={newAccType} onValueChange={setNewAccType}>
+                    <SelectTrigger className="h-8 text-sm mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="checking">Conta Corrente</SelectItem>
+                      <SelectItem value="savings">Poupança</SelectItem>
+                      <SelectItem value="credit">Cartão de Crédito</SelectItem>
+                      <SelectItem value="wallet">Carteira</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-xs">Cor</Label>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {COLOR_SWATCHES.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setNewAccColor(color)}
+                        className={cn(
+                          'w-6 h-6 rounded-full border-2 transition-transform hover:scale-110',
+                          newAccColor === color ? 'border-foreground scale-110' : 'border-transparent'
+                        )}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 text-xs"
+                    disabled={isSavingAcc || !newAccName.trim()}
+                    onClick={handleSaveNewAccount}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                    {isSavingAcc ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 text-xs"
+                    onClick={() => { setShowNewAccount(false); setNewAccName(''); setNewAccColor('#3B82F6'); setNewAccType('checking'); }}
+                  >
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Cancelar
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2 pt-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={isSavingAcc || !newAccName.trim()}
-                  onClick={handleSaveNewAccount}
-                >
-                  <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                  {isSavingAcc ? 'Salvando...' : 'Salvar'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="h-8 text-xs"
-                  onClick={() => { setShowNewAccount(false); setNewAccName(''); setNewAccColor('#3B82F6'); setNewAccType('checking'); }}
-                >
-                  <X className="h-3.5 w-3.5 mr-1" />
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
+            )}
 
           </div>
         </div>

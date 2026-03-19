@@ -10,7 +10,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Area, AreaChart
 } from 'recharts';
-import { useCurrentUser, useTransactions, useCategories } from '@/hooks/use-api';
+import { useTransactions, useCategories } from '@/hooks/use-api';
 import { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp, TrendingDown, BarChart3, PieChart as PieChartIcon,
@@ -28,8 +28,7 @@ export function ExpenseChart() {
   const colorTheme = 'pastel' as const;
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  const { data: currentUser } = useCurrentUser();
-  const { data: transactions = [] } = useTransactions(currentUser?.id);
+  const { data: transactions = [] } = useTransactions();
   const { data: categories = [] } = useCategories();
 
   // Soft color palettes
@@ -346,7 +345,7 @@ export function ExpenseChart() {
                       <span className="text-xs text-purple-600 font-medium">
                         {pieChartData[0]?.percentage}% do total
                       </span>
-                      
+
                     </div>
                   </div>
                 </div>

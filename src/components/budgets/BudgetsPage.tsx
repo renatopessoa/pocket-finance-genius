@@ -9,7 +9,7 @@ import { Plus, AlertTriangle, CheckCircle, Target, Edit, Trash2 } from 'lucide-r
 import { BudgetForm } from './BudgetForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import {
-  useCurrentUser, useBudgets, useTransactions, useCategories,
+  useBudgets, useTransactions, useCategories,
   useCreateBudget, useUpdateBudget, useDeleteBudget,
 } from '@/hooks/use-api';
 import { useToast } from '@/components/ui/use-toast';
@@ -23,16 +23,13 @@ export function BudgetsPage() {
   const [isBudgetFormOpen, setIsBudgetFormOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
-
-  const { data: budgets = [], isLoading } = useBudgets(userId, currentMonth, currentYear);
-  const { data: transactions = [] } = useTransactions(userId);
+  const { data: budgets = [], isLoading } = useBudgets(currentMonth, currentYear);
+  const { data: transactions = [] } = useTransactions();
   const { data: categories = [] } = useCategories();
 
-  const createBudget = useCreateBudget(userId ?? '');
-  const updateBudget = useUpdateBudget(userId ?? '');
-  const deleteBudget = useDeleteBudget(userId ?? '');
+  const createBudget = useCreateBudget();
+  const updateBudget = useUpdateBudget();
+  const deleteBudget = useDeleteBudget();
 
   // Compute spent from real transactions for the current month
   const getSpentAmount = (categoryId: string) =>

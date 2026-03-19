@@ -9,7 +9,7 @@ import { AccountForm } from './AccountForm';
 import { TransferForm } from './TransferForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import {
-  useCurrentUser, useAccounts, useTransactions,
+  useAccounts, useTransactions,
   useCreateAccount, useUpdateAccount, useDeleteAccount, useTransferFunds,
 } from '@/hooks/use-api';
 import { useToast } from '@/components/ui/use-toast';
@@ -20,16 +20,13 @@ export function AccountsPage() {
   const [isTransferFormOpen, setIsTransferFormOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
+  const { data: accounts = [], isLoading } = useAccounts();
+  const { data: transactions = [] } = useTransactions();
 
-  const { data: accounts = [], isLoading } = useAccounts(userId);
-  const { data: transactions = [] } = useTransactions(userId);
-
-  const createAccount = useCreateAccount(userId ?? '');
-  const updateAccount = useUpdateAccount(userId ?? '');
-  const deleteAccount = useDeleteAccount(userId ?? '');
-  const transferFunds = useTransferFunds(userId ?? '');
+  const createAccount = useCreateAccount();
+  const updateAccount = useUpdateAccount();
+  const deleteAccount = useDeleteAccount();
+  const transferFunds = useTransferFunds();
 
   const getAccountIcon = (type: string) => {
     switch (type) {

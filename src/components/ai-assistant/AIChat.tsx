@@ -5,18 +5,8 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Send, Bot, User, Lightbulb } from 'lucide-react';
-import OpenAI from 'openai';
 
-// Initialize OpenAI client
-// Access environment variables properly in a browser context
-const openaiApiKey = typeof window !== 'undefined'
-  ? window.__NEXT_DATA__?.props?.pageProps?.openaiApiKey || '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'
-  : '';
-
-const openai = new OpenAI({
-  apiKey: openaiApiKey,
-  dangerouslyAllowBrowser: true // Note: For production, use server-side API calls instead
-});
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface Message {
   id: string;
@@ -59,35 +49,27 @@ export function AIChat() {
     setIsLoading(true);
 
     try {
-      // Get conversation history for context
-      const conversationHistory = messages.map(msg => ({
-        role: msg.isUser ? ('user' as const) : ('assistant' as const),
+      // Build conversation history for context
+      const history = messages.map(msg => ({
+        role: msg.isUser ? 'user' : 'assistant',
         content: msg.content
       }));
 
-      // Add current message
-      conversationHistory.push({
-        role: 'user' as const,
-        content: inputMessage
+      // Call backend AI endpoint
+      const token = localStorage.getItem('pfg_token');
+      const res = await fetch(`${API_URL}/ai/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ message: inputMessage, history }),
       });
 
-      // Call OpenAI API
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {
-            role: "system",
-            content: "Você é um assistente financeiro pessoal brasileiro. Forneça conselhos personalizados sobre finanças pessoais, orçamentos, economias e investimentos. Use linguagem amigável e exemplos práticos com valores em reais (R$). Seja conciso e direto."
-          },
-          ...conversationHistory
-        ],
-        temperature: 0.7,
-        max_tokens: 500
-      });
-
-      // Get AI response
-      const aiResponseContent = response.choices[0]?.message?.content ||
-        "Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.";
+      const data = await res.json();
+      const aiResponseContent = res.ok
+        ? data.response
+        : 'Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.';
 
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -98,7 +80,7 @@ export function AIChat() {
 
       setMessages(prev => [...prev, aiResponse]);
     } catch (error) {
-      console.error("Error calling OpenAI API:", error);
+      console.error("Error calling AI API:", error);
 
       // Add error message
       const errorResponse: Message = {

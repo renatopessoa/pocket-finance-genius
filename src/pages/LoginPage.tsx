@@ -50,10 +50,10 @@ export function LoginPage() {
 
       if (!res.ok) throw new Error(data.error || 'Erro desconhecido');
 
-      login(data);
+      login(data.user, data.token);
       toast({
         title: mode === 'login' ? 'Bem-vindo de volta!' : 'Conta criada com sucesso!',
-        description: `Olá, ${data.name}!`,
+        description: `Olá, ${data.user.name}!`,
       });
     } catch (err: any) {
       toast({
@@ -143,22 +143,20 @@ export function LoginPage() {
             <button
               type="button"
               onClick={() => setMode('login')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                mode === 'login'
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === 'login'
                   ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               Entrar
             </button>
             <button
               type="button"
               onClick={() => setMode('register')}
-              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                mode === 'register'
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${mode === 'register'
                   ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
                   : 'text-gray-400 hover:text-white'
-              }`}
+                }`}
             >
               Cadastrar
             </button>

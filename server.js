@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import rateLimit from 'express-rate-limit';
 
 import pool from './server/db.js';
 
@@ -14,6 +15,7 @@ import categoriesRoutes from './server/routes/categories.js';
 import transactionsRoutes from './server/routes/transactions.js';
 import budgetsRoutes from './server/routes/budgets.js';
 import educationalRoutes from './server/routes/educational.js';
+import aiRoutes from './server/routes/ai.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +26,12 @@ const port = process.env.PORT || 3001;
 // ── Middleware ──
 app.use(cors());
 app.use(express.json());
+
+// ── Rate limiting ──
+const globalLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Muitas tentativas. Tente novamente em 15 minutos.' } });
+app.use('/api', globalLimiter);
+app.use('/api/auth', authLimiter);
 
 // ── Request logging (leve, sem lib extra) ──
 app.use((req, res, next) => {
@@ -46,6 +54,7 @@ app.use('/api/categories', categoriesRoutes);
 app.use('/api/transactions', transactionsRoutes);
 app.use('/api/budgets', budgetsRoutes);
 app.use('/api/educational-content', educationalRoutes);
+app.use('/api/ai', aiRoutes);
 
 // ── Seed: categorias padrão ──
 async function seedCategories() {

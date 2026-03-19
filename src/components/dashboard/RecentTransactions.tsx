@@ -2,14 +2,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useCurrentUser, useTransactions, useCategories } from '@/hooks/use-api';
+import { useTransactions, useCategories } from '@/hooks/use-api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export function RecentTransactions() {
-  const { data: currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
-  const { data: transactions = [], isLoading } = useTransactions(userId);
+  const { data: transactions = [], isLoading } = useTransactions();
   const { data: categories = [] } = useCategories();
 
   const recentTransactions = [...transactions]
@@ -53,8 +51,8 @@ export function RecentTransactions() {
                   </div>
                   <div className="text-right">
                     <p className={`font-medium ${transaction.type === 'income'
-                        ? 'text-green-600'
-                        : 'text-red-600'
+                      ? 'text-green-600'
+                      : 'text-red-600'
                       }`}>
                       {transaction.type === 'income' ? '+' : '-'}
                       {new Intl.NumberFormat('pt-BR', {

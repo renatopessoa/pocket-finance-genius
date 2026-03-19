@@ -12,7 +12,7 @@ import { TransactionForm } from './TransactionForm';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import {
-  useCurrentUser, useTransactions, useCreateTransaction,
+  useTransactions, useCreateTransaction,
   useUpdateTransaction, useDeleteTransaction, useCategories, useAccounts,
 } from '@/hooks/use-api';
 import { format } from 'date-fns';
@@ -27,16 +27,13 @@ export function TransactionsPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
-
-  const { data: transactions = [], isLoading } = useTransactions(userId);
+  const { data: transactions = [], isLoading } = useTransactions();
   const { data: categories = [] } = useCategories();
-  const { data: accounts = [] } = useAccounts(userId);
+  const { data: accounts = [] } = useAccounts();
 
-  const createTransaction = useCreateTransaction(userId ?? '');
-  const updateTransaction = useUpdateTransaction(userId ?? '');
-  const deleteTransaction = useDeleteTransaction(userId ?? '');
+  const createTransaction = useCreateTransaction();
+  const updateTransaction = useUpdateTransaction();
+  const deleteTransaction = useDeleteTransaction();
 
   const filteredTransactions = transactions.filter(transaction => {
     const matchesSearch = transaction.description.toLowerCase().includes(searchTerm.toLowerCase());

@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { CalendarIcon, FileText, FileSpreadsheet, TrendingUp, TrendingDown, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, startOfYear, endOfYear } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { useCurrentUser, useTransactions, useCategories, useAccounts } from '@/hooks/use-api';
+import { useTransactions, useCategories, useAccounts } from '@/hooks/use-api';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, Legend,
@@ -32,11 +32,9 @@ export function ReportsPage() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedAccount, setSelectedAccount] = useState('all');
 
-  const { data: currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
-  const { data: allTransactions = [] } = useTransactions(userId);
+  const { data: allTransactions = [] } = useTransactions();
   const { data: categories = [] } = useCategories();
-  const { data: accounts = [] } = useAccounts(userId);
+  const { data: accounts = [] } = useAccounts();
 
   const { start, end } = useMemo(() => {
     if (reportType === 'yearly') {
@@ -90,19 +88,19 @@ export function ReportsPage() {
   const monthlyEvolution = useMemo(() =>
     reportType === 'yearly'
       ? Array.from({ length: 12 }, (_, i) => {
-          const monthTxs = allTransactions.filter(t => {
-            const d = t.date instanceof Date ? t.date : new Date(t.date);
-            return d.getMonth() === i && d.getFullYear() === selectedDate.getFullYear();
-          });
-          const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
-          const expenses = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-          return {
-            month: new Date(selectedDate.getFullYear(), i).toLocaleDateString('pt-BR', { month: 'short' }),
-            Receitas: income,
-            Despesas: expenses,
-            Saldo: income - expenses,
-          };
-        })
+        const monthTxs = allTransactions.filter(t => {
+          const d = t.date instanceof Date ? t.date : new Date(t.date);
+          return d.getMonth() === i && d.getFullYear() === selectedDate.getFullYear();
+        });
+        const income = monthTxs.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+        const expenses = monthTxs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+        return {
+          month: new Date(selectedDate.getFullYear(), i).toLocaleDateString('pt-BR', { month: 'short' }),
+          Receitas: income,
+          Despesas: expenses,
+          Saldo: income - expenses,
+        };
+      })
       : [],
     [reportType, allTransactions, selectedDate]
   );
@@ -118,9 +116,9 @@ Saldo: ${fmt(balance)}
 
 TRANSAÇÕES:
 ${filteredTransactions.map(t => {
-  const d = t.date instanceof Date ? t.date : new Date(t.date);
-  return `${format(d, 'dd/MM/yyyy')} - ${t.description} - ${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}`;
-}).join('\n')}`;
+      const d = t.date instanceof Date ? t.date : new Date(t.date);
+      return `${format(d, 'dd/MM/yyyy')} - ${t.description} - ${t.type === 'income' ? '+' : '-'}${fmt(t.amount)}`;
+    }).join('\n')}`;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

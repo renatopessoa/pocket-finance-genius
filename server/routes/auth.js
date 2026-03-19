@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import pool from '../db.js';
+import { generateToken } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -19,7 +20,9 @@ router.post('/register', async (req, res) => {
             'INSERT INTO pfg_users (name, email, password_hash) VALUES ($1, $2, $3) RETURNING id, name, email, avatar, created_at',
             [name, email, password_hash]
         );
-        res.status(201).json(result.rows[0]);
+        const user = result.rows[0];
+        const token = generateToken(user);
+        res.status(201).json({ user, token });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao criar usuário' });
@@ -41,7 +44,9 @@ router.post('/login', async (req, res) => {
         if (!valid) {
             return res.status(401).json({ error: 'E-mail ou senha inválidos' });
         }
-        res.json({ id: user.id, name: user.name, email: user.email, avatar: user.avatar });
+        const userData = { id: user.id, name: user.name, email: user.email, avatar: user.avatar };
+        const token = generateToken(userData);
+        res.json({ user: userData, token });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao fazer login' });

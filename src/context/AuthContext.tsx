@@ -9,14 +9,16 @@ interface User {
 
 interface AuthContextValue {
   currentUser: User | null;
-  login: (user: User) => void;
+  token: string | null;
+  login: (user: User, token: string) => void;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
   currentUser: null,
-  login: () => {},
-  logout: () => {},
+  token: null,
+  login: () => { },
+  logout: () => { },
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -29,18 +31,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   });
 
-  const login = useCallback((user: User) => {
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('pfg_token');
+    } catch {
+      return null;
+    }
+  });
+
+  const login = useCallback((user: User, tkn: string) => {
     localStorage.setItem('pfg_user', JSON.stringify(user));
+    localStorage.setItem('pfg_token', tkn);
     setCurrentUser(user);
+    setToken(tkn);
   }, []);
 
   const logout = useCallback(() => {
     localStorage.removeItem('pfg_user');
+    localStorage.removeItem('pfg_token');
     setCurrentUser(null);
+    setToken(null);
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, token, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,14 +2,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react';
-import { useCurrentUser, useAccounts, useTransactions } from '@/hooks/use-api';
+import { useAccounts, useTransactions } from '@/hooks/use-api';
 
 export function StatsCards() {
-  const { data: currentUser } = useCurrentUser();
-  const userId = currentUser?.id;
-
-  const { data: accounts = [], isLoading: loadingAccounts } = useAccounts(userId);
-  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions(userId);
+  const { data: accounts = [], isLoading: loadingAccounts } = useAccounts();
+  const { data: transactions = [], isLoading: loadingTransactions } = useTransactions();
 
   const isLoading = loadingAccounts || loadingTransactions;
 
