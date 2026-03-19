@@ -212,7 +212,10 @@ export const useCreateTransaction = (userId: string) => {
             const json = await res.json();
             return Array.isArray(json) ? json.map(toTransaction) : toTransaction(json);
         },
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', userId] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['transactions', userId] });
+            qc.invalidateQueries({ queryKey: ['accounts', userId] });
+        },
     });
 };
 
@@ -237,7 +240,10 @@ export const useUpdateTransaction = (userId: string) => {
             if (!res.ok) throw new Error('Erro ao atualizar transação');
             return toTransaction(await res.json());
         },
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', userId] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['transactions', userId] });
+            qc.invalidateQueries({ queryKey: ['accounts', userId] });
+        },
     });
 };
 
@@ -248,7 +254,10 @@ export const useDeleteTransaction = (userId: string) => {
             const res = await fetch(`${API_URL}/transactions/${id}`, { method: 'DELETE' });
             if (!res.ok) throw new Error('Erro ao excluir transação');
         },
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['transactions', userId] }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['transactions', userId] });
+            qc.invalidateQueries({ queryKey: ['accounts', userId] });
+        },
     });
 };
 
