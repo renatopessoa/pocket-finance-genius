@@ -1,0 +1,210 @@
+{
+  "config": {
+    "configFile": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\playwright.config.ts",
+    "rootDir": "C:/Users/rpess/Documents/DevOPS/pocket-finance-genius/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/rpess/Documents/DevOPS/pocket-finance-genius/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "C:/Users/rpess/Documents/DevOPS/pocket-finance-genius/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 11,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "auth.spec.ts",
+      "file": "auth.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Authentication Flow",
+          "file": "auth.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "should allow a new user to register and logs them in automatically",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 1456,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Conta criada com sucesso!')\nExpected: visible\nError: strict mode violation: getByText('Conta criada com sucesso!') resolved to 2 elements:\n    1) <div class=\"text-sm font-semibold\">Conta criada com sucesso!</div> aka getByText('Conta criada com sucesso!', { exact: true })\n    2) <span role=\"status\" aria-atomic=\"true\" aria-live=\"assertive\">Notification Conta criada com sucesso!Ol??, Test U???</span> aka getByText('Notification Conta criada com')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Conta criada com sucesso!')\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Conta criada com sucesso!')\nExpected: visible\nError: strict mode violation: getByText('Conta criada com sucesso!') resolved to 2 elements:\n    1) <div class=\"text-sm font-semibold\">Conta criada com sucesso!</div> aka getByText('Conta criada com sucesso!', { exact: true })\n    2) <span role=\"status\" aria-atomic=\"true\" aria-live=\"assertive\">Notification Conta criada com sucesso!Ol??, Test U???</span> aka getByText('Notification Conta criada com')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Conta criada com sucesso!')\u001b[22m\n\n    at C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts:25:63",
+                        "location": {
+                          "file": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts",
+                          "column": 63,
+                          "line": 25
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 23 |\u001b[39m     \n \u001b[90m 24 |\u001b[39m     \u001b[90m// Wait for the success toast which also implies the dashboard is loading\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 25 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'Conta criada com sucesso!'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                               \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 26 |\u001b[39m     \n \u001b[90m 27 |\u001b[39m     \u001b[90m// After registration, user is automatically logged in and navigated to the dashboard\u001b[39m\n \u001b[90m 28 |\u001b[39m     \u001b[90m// Verify the URL changed or some generic dashboard component is visible\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts",
+                            "column": 63,
+                            "line": 25
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: getByText('Conta criada com sucesso!')\nExpected: visible\nError: strict mode violation: getByText('Conta criada com sucesso!') resolved to 2 elements:\n    1) <div class=\"text-sm font-semibold\">Conta criada com sucesso!</div> aka getByText('Conta criada com sucesso!', { exact: true })\n    2) <span role=\"status\" aria-atomic=\"true\" aria-live=\"assertive\">Notification Conta criada com sucesso!Ol??, Test U???</span> aka getByText('Notification Conta criada com')\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for getByText('Conta criada com sucesso!')\u001b[22m\n\n\n  23 |     \n  24 |     // Wait for the success toast which also implies the dashboard is loading\n> 25 |     await expect(page.getByText('Conta criada com sucesso!')).toBeVisible();\n     |                                                               ^\n  26 |     \n  27 |     // After registration, user is automatically logged in and navigated to the dashboard\n  28 |     // Verify the URL changed or some generic dashboard component is visible\n    at C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts:25:63"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-19T14:59:11.626Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\test-results\\auth-Authentication-Flow-s-aafc3--logs-them-in-automatically-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts",
+                        "column": 63,
+                        "line": 25
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-339822bbb549166e8ba8",
+              "file": "auth.spec.ts",
+              "line": 9,
+              "column": 3
+            },
+            {
+              "title": "should show error on wrong credentials",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "failed",
+                      "duration": 473,
+                      "error": {
+                        "message": "Error: locator.click: Error: strict mode violation: getByRole('button', { name: 'Entrar' }) resolved to 2 elements:\n    1) <button type=\"button\" class=\"flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg\">Entrar</button> aka getByRole('button', { name: 'Entrar' }).first()\n    2) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 px-4 py-2 w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-pu???>Entrar</button> aka locator('form').getByRole('button', { name: 'Entrar' })\n\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Entrar' })\u001b[22m\n",
+                        "stack": "Error: locator.click: Error: strict mode violation: getByRole('button', { name: 'Entrar' }) resolved to 2 elements:\n    1) <button type=\"button\" class=\"flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg\">Entrar</button> aka getByRole('button', { name: 'Entrar' }).first()\n    2) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 px-4 py-2 w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-pu???>Entrar</button> aka locator('form').getByRole('button', { name: 'Entrar' })\n\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Entrar' })\u001b[22m\n\n    at C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts:36:56",
+                        "location": {
+                          "file": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts",
+                          "column": 56,
+                          "line": 36
+                        },
+                        "snippet": "\u001b[0m \u001b[90m 34 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByLabel(\u001b[32m'E-mail'\u001b[39m)\u001b[33m.\u001b[39mfill(\u001b[32m'nonexistent@example.com'\u001b[39m)\u001b[33m;\u001b[39m\n \u001b[90m 35 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByLabel(\u001b[32m'Senha'\u001b[39m)\u001b[33m.\u001b[39mfill(\u001b[32m'wrongpassword'\u001b[39m)\u001b[33m;\u001b[39m\n\u001b[31m\u001b[1m>\u001b[22m\u001b[39m\u001b[90m 36 |\u001b[39m     \u001b[36mawait\u001b[39m page\u001b[33m.\u001b[39mgetByRole(\u001b[32m'button'\u001b[39m\u001b[33m,\u001b[39m { name\u001b[33m:\u001b[39m \u001b[32m'Entrar'\u001b[39m })\u001b[33m.\u001b[39mclick()\u001b[33m;\u001b[39m\n \u001b[90m    |\u001b[39m                                                        \u001b[31m\u001b[1m^\u001b[22m\u001b[39m\n \u001b[90m 37 |\u001b[39m     \n \u001b[90m 38 |\u001b[39m     \u001b[36mawait\u001b[39m expect(page\u001b[33m.\u001b[39mgetByText(\u001b[32m'E-mail ou senha inv??lidos'\u001b[39m))\u001b[33m.\u001b[39mtoBeVisible()\u001b[33m;\u001b[39m \n \u001b[90m 39 |\u001b[39m   })\u001b[33m;\u001b[39m\u001b[0m"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts",
+                            "column": 56,
+                            "line": 36
+                          },
+                          "message": "Error: locator.click: Error: strict mode violation: getByRole('button', { name: 'Entrar' }) resolved to 2 elements:\n    1) <button type=\"button\" class=\"flex-1 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg\">Entrar</button> aka getByRole('button', { name: 'Entrar' }).first()\n    2) <button type=\"submit\" class=\"inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 px-4 py-2 w-full h-11 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white font-semibold rounded-xl shadow-lg shadow-pu???>Entrar</button> aka locator('form').getByRole('button', { name: 'Entrar' })\n\nCall log:\n\u001b[2m  - waiting for getByRole('button', { name: 'Entrar' })\u001b[22m\n\n\n  34 |     await page.getByLabel('E-mail').fill('nonexistent@example.com');\n  35 |     await page.getByLabel('Senha').fill('wrongpassword');\n> 36 |     await page.getByRole('button', { name: 'Entrar' }).click();\n     |                                                        ^\n  37 |     \n  38 |     await expect(page.getByText('E-mail ou senha inv??lidos')).toBeVisible(); \n  39 |   });\n    at C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts:36:56"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-19T14:59:11.632Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\test-results\\auth-Authentication-Flow-s-58ef4--error-on-wrong-credentials-chromium\\error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "C:\\Users\\rpess\\Documents\\DevOPS\\pocket-finance-genius\\tests\\e2e\\auth.spec.ts",
+                        "column": 56,
+                        "line": 36
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "d748ac400d08b85935ef-e4222e3899a60683c344",
+              "file": "auth.spec.ts",
+              "line": 32,
+              "column": 3
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-03-19T14:59:10.233Z",
+    "duration": 3044.166,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

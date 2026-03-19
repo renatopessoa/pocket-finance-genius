@@ -1,0 +1,153 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e2]:
+  - region "Notifications (F8)":
+    - list
+  - region "Notifications alt+T"
+  - generic [ref=e4]:
+    - navigation [ref=e7]:
+      - button "Dashboard" [ref=e8] [cursor=pointer]:
+        - img
+        - generic: Dashboard
+      - button "Transações" [ref=e9] [cursor=pointer]:
+        - img
+        - generic: Transações
+      - button "Contas" [ref=e10] [cursor=pointer]:
+        - img
+        - generic: Contas
+      - button "Orçamentos" [ref=e11] [cursor=pointer]:
+        - img
+        - generic: Orçamentos
+      - button "Relatórios" [ref=e12] [cursor=pointer]:
+        - img
+        - generic: Relatórios
+      - button "Educação" [ref=e13] [cursor=pointer]:
+        - img
+        - generic: Educação
+      - button "Assistente IA" [ref=e14] [cursor=pointer]:
+        - img
+        - generic: Assistente IA
+      - button "Configurações" [ref=e15] [cursor=pointer]:
+        - img
+        - generic: Configurações
+    - generic [ref=e16]:
+      - banner [ref=e17]:
+        - generic [ref=e19]:
+          - generic [ref=e21]: F
+          - heading "Meu Financeiro" [level=1] [ref=e22]
+        - generic [ref=e23]:
+          - button [ref=e24] [cursor=pointer]:
+            - img
+          - button [ref=e25] [cursor=pointer]:
+            - img
+          - button "TU" [ref=e26] [cursor=pointer]:
+            - generic [ref=e28]: TU
+      - main [ref=e29]:
+        - generic [ref=e30]:
+          - generic [ref=e31]:
+            - heading "Dashboard" [level=2] [ref=e32]
+            - generic [ref=e33]: "Última atualização: 19/03/2026"
+          - generic [ref=e34]:
+            - generic [ref=e35]:
+              - generic [ref=e36]:
+                - heading "Saldo Total" [level=3] [ref=e37]
+                - img [ref=e39]
+              - generic [ref=e42]: R$ 0,00
+            - generic [ref=e43]:
+              - generic [ref=e44]:
+                - heading "Receitas do Mês" [level=3] [ref=e45]
+                - img [ref=e47]
+              - generic [ref=e51]: R$ 0,00
+            - generic [ref=e52]:
+              - generic [ref=e53]:
+                - heading "Despesas do Mês" [level=3] [ref=e54]
+                - img [ref=e56]
+              - generic [ref=e60]: R$ 0,00
+            - generic [ref=e61]:
+              - generic [ref=e62]:
+                - heading "Economia do Mês" [level=3] [ref=e63]
+                - img [ref=e65]
+              - generic [ref=e70]: R$ 0,00
+          - generic [ref=e71]:
+            - generic [ref=e73]:
+              - generic [ref=e74]:
+                - generic [ref=e75]:
+                  - heading "Análise Inteligente Insights personalizados dos seus gastos" [level=3] [ref=e76]:
+                    - img [ref=e79]
+                    - generic [ref=e82]:
+                      - generic [ref=e83]:
+                        - generic [ref=e84]: Análise Inteligente
+                        - img [ref=e85]
+                      - paragraph [ref=e87]:
+                        - img [ref=e88]
+                        - text: Insights personalizados dos seus gastos
+                  - generic [ref=e91]:
+                    - button "Mensal" [ref=e92] [cursor=pointer]:
+                      - img
+                      - text: Mensal
+                    - button "Anual" [ref=e93] [cursor=pointer]:
+                      - img
+                      - text: Anual
+                - generic [ref=e94]:
+                  - generic [ref=e97] [cursor=pointer]:
+                    - generic [ref=e98]:
+                      - generic [ref=e99]:
+                        - paragraph [ref=e100]: Total Gasto
+                        - paragraph [ref=e101]: R$ 0,00
+                      - img [ref=e103]
+                    - generic [ref=e107]:
+                      - img [ref=e108]
+                      - generic [ref=e111]: vs mês anterior
+                    - progressbar [ref=e112]
+                  - generic [ref=e116] [cursor=pointer]:
+                    - generic [ref=e117]:
+                      - generic [ref=e118]:
+                        - paragraph [ref=e119]: Categorias Ativas
+                        - paragraph [ref=e120]: "0"
+                      - img [ref=e122]
+                    - generic [ref=e124]: 0 disponíveis
+                  - generic [ref=e127] [cursor=pointer]:
+                    - generic [ref=e128]:
+                      - generic [ref=e129]:
+                        - paragraph [ref=e130]: Maior Categoria
+                        - paragraph [ref=e131]: "0"
+                      - img [ref=e133]
+                    - progressbar [ref=e136]
+                    - generic [ref=e139]: "% do total"
+                  - generic [ref=e142] [cursor=pointer]:
+                    - generic [ref=e143]:
+                      - generic [ref=e144]:
+                        - paragraph [ref=e145]: Média por Categoria
+                        - paragraph [ref=e146]: R$ 0,00
+                      - img [ref=e148]
+                    - generic [ref=e150]:
+                      - img [ref=e151]
+                      - generic [ref=e153]: "Meta: 0"
+                    - progressbar [ref=e154]
+              - generic [ref=e157]:
+                - tablist [ref=e158]:
+                  - tab "Distribuição" [selected] [ref=e159] [cursor=pointer]:
+                    - img [ref=e160]
+                    - generic [ref=e163]: Distribuição
+                  - tab "Comparação" [ref=e164] [cursor=pointer]:
+                    - img [ref=e165]
+                    - generic [ref=e167]: Comparação
+                  - tab "Tendência" [ref=e168] [cursor=pointer]:
+                    - img [ref=e169]
+                    - generic [ref=e172]: Tendência
+                - tabpanel "Distribuição" [ref=e173]:
+                  - generic [ref=e174]:
+                    - generic [ref=e175]:
+                      - img [ref=e178]
+                      - generic:
+                        - generic:
+                          - paragraph: Total Geral
+                          - paragraph: R$ 0,00
+                    - generic [ref=e180]:
+                      - heading "Detalhamento Inteligente" [level=4] [ref=e181]:
+                        - img [ref=e182]
+                        - text: Detalhamento Inteligente
+                      - generic [ref=e184]: 0 categorias
+            - heading "Transações Recentes" [level=3] [ref=e187]
+```
