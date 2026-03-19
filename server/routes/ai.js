@@ -15,7 +15,12 @@ import {
 const router = Router();
 router.use(authenticateToken);
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+function getOpenAIClient() {
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY não configurada. Configure a variável de ambiente no servidor.');
+    }
+    return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+}
 
 // ── 2.2: Financial snapshot injected into system prompt ───────────────────────
 async function buildFinancialSnapshot(userId, today) {
@@ -465,6 +470,7 @@ router.post('/chat', async (req, res) => {
         let iterations = 0;
         let responseMessage;
         const toolCallsWithResults = []; // 4.1/4.2: track results for visualization
+        const openai = getOpenAIClient();
 
         while (iterations < 5) {
             const completion = await openai.chat.completions.create({
@@ -513,6 +519,9 @@ router.post('/chat', async (req, res) => {
         res.json({ response, ...(visualization ? { visualization } : {}) });
     } catch (err) {
         console.error('Erro na API de IA:', err);
+        if (err.message?.includes('OPENAI_API_KEY')) {
+            return res.status(503).json({ error: 'Serviço de IA indisponível: chave de API não configurada.' });
+        }
         res.status(500).json({ error: 'Erro ao processar solicitação de IA' });
     }
 });
