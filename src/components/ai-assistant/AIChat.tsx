@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Send, Bot, User, Lightbulb } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Send, Bot, User, Lightbulb, Database } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -15,24 +15,52 @@ interface Message {
   timestamp: Date;
 }
 
+/** Very light markdown renderer: bold and unordered lists. */
+function renderMarkdown(text: string) {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    // Bullet list item
+    if (/^[-*•]\s/.test(line)) {
+      const content = line.replace(/^[-*•]\s/, '');
+      return (
+        <li key={i} className="ml-4 list-disc" dangerouslySetInnerHTML={{ __html: boldify(content) }} />
+      );
+    }
+    // Empty line = spacing
+    if (line.trim() === '') return <br key={i} />;
+    return <p key={i} className="mb-1" dangerouslySetInnerHTML={{ __html: boldify(line) }} />;
+  });
+}
+
+function boldify(text: string) {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
 export function AIChat() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Olá! Sou seu assistente financeiro pessoal. Como posso ajudá-lo hoje? Posso analisar seus gastos, sugerir formas de economizar ou ajudar com planejamento financeiro.',
+      content: 'Olá! Sou seu assistente financeiro pessoal com acesso aos seus dados reais. Posso analisar seus gastos, verificar seus orçamentos, acompanhar suas metas e sugerir maneiras de economizar. Como posso ajudá-lo hoje?',
       isUser: false,
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   const suggestedQuestions = [
-    "Como posso economizar mais este mês?",
-    "Onde estou gastando mais dinheiro?",
-    "Monte um plano para quitar minhas dívidas",
-    "Como criar uma reserva de emergência?"
+    "Quanto gastei este mês por categoria?",
+    "Como estão meus orçamentos este mês?",
+    "Qual é o meu saldo atual em todas as contas?",
+    "Estou no caminho certo nas minhas metas financeiras?",
+    "Onde posso economizar mais dinheiro?",
+    "Analise meus gastos do último mês",
   ];
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
@@ -111,9 +139,9 @@ export function AIChat() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Assistente Financeiro IA</h2>
-        <div className="flex items-center space-x-2 text-sm text-gray-500">
-          <Bot className="h-4 w-4" />
-          <span>Powered by AI</span>
+        <div className="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400">
+          <Database className="h-4 w-4" />
+          <span>Acesso aos seus dados financeiros</span>
         </div>
       </div>
 
@@ -155,7 +183,11 @@ export function AIChat() {
                         : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white'
                         }`}
                     >
-                      <p className="text-sm">{message.content}</p>
+                      {message.isUser ? (
+                        <p className="text-sm">{message.content}</p>
+                      ) : (
+                        <div className="text-sm">{renderMarkdown(message.content)}</div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -167,14 +199,19 @@ export function AIChat() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded-lg">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="flex items-center space-x-2">
+                        <Database className="h-3 w-3 text-gray-400 animate-pulse" />
+                        <span className="text-xs text-gray-500">Consultando seus dados...</span>
+                        <div className="flex space-x-1">
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
+                <div ref={bottomRef} />
               </div>
             </ScrollArea>
 
