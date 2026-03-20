@@ -99,7 +99,7 @@ export function AIChat() {
       const data = await res.json();
       const aiResponseContent = res.ok
         ? data.response
-        : 'Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.';
+        : (data.error || 'Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.');
 
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),

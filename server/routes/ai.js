@@ -483,46 +483,84 @@ router.post('/chat', async (req, res) => {
             });
 
             responseMessage = completion.choices[0]?.message;
-            messages.push(responseMessage);
+            if (!responseMessage) {
+                console.error('OpenAI retornou uma resposta vazia');
+                break;
+            }
 
-            if (!responseMessage?.tool_calls?.length) break;
+            // Sanitizar a mensagem do assistente para garantir que apenas campos válidos sejam enviados de volta
+            const sanitizedMessage = {
+                role: 'assistant',
+                content: responseMessage.content || null,
+            };
+            if (responseMessage.tool_calls) {
+                sanitizedMessage.tool_calls = responseMessage.tool_calls;
+            }
 
-            // Execute each requested tool call in parallel
-            await Promise.all(
+            messages.push(sanitizedMessage);
+
+            if (!responseMessage.tool_calls?.length) break;
+
+            // Execute requested tool calls sequentially or maintain their order in the messages array
+            const toolResults = await Promise.all(
                 responseMessage.tool_calls.map(async (toolCall) => {
                     const toolName = toolCall.function.name;
                     let toolArgs = {};
                     try {
                         toolArgs = JSON.parse(toolCall.function.arguments || '{}');
-                    } catch {
-                        // malformed JSON — proceed with empty args
+                    } catch (e) {
+                        console.error(`Erro ao parsear argumentos da função ${toolName}:`, e);
                     }
-                    const toolResult = await executeTool(toolName, toolArgs, userId);
-                    toolCallsWithResults.push({ name: toolName, result: toolResult });
-                    messages.push({
-                        role: 'tool',
-                        tool_call_id: toolCall.id,
-                        content: JSON.stringify(toolResult),
-                    });
+
+                    try {
+                        const result = await executeTool(toolName, toolArgs, userId);
+                        toolCallsWithResults.push({ name: toolName, result });
+                        return {
+                            role: 'tool',
+                            tool_call_id: toolCall.id,
+                            content: JSON.stringify(result),
+                        };
+                    } catch (e) {
+                        console.error(`Erro ao executar ferramenta ${toolName}:`, e);
+                        return {
+                            role: 'tool',
+                            tool_call_id: toolCall.id,
+                            content: JSON.stringify({ error: `Erro ao executar ${toolName}: ${e.message}` }),
+                        };
+                    }
                 })
             );
+
+            // Adicionar resultados das ferramentas ao histórico (mantendo a ordem original dos tool_calls)
+            messages.push(...toolResults);
 
             iterations++;
         }
 
-        const response = responseMessage?.content ||
-            'Desculpe, não consegui processar sua solicitação. Tente novamente mais tarde.';
+        const response = responseMessage?.content || (iterations >= 5
+            ? 'Desculpe, a análise dos seus dados está complexa demais para uma única resposta. Tente fazer uma pergunta mais específica.'
+            : 'Desculpe, não consegui processar sua solicitação no momento.');
 
         // 4.1/4.2: attach visualization if any tool returned chart-worthy data
         const visualization = buildVisualization(toolCallsWithResults);
 
         res.json({ response, ...(visualization ? { visualization } : {}) });
     } catch (err) {
-        console.error('Erro na API de IA:', err);
-        if (err.message?.includes('OPENAI_API_KEY')) {
-            return res.status(503).json({ error: 'Serviço de IA indisponível: chave de API não configurada.' });
+        console.error('Erro detalhado na API de IA:', err);
+        
+        if (err.status === 401 || err.message?.includes('Incorrect API key')) {
+            return res.status(401).json({ error: 'Configuração de IA inválida: a chave da API do OpenAI está incorreta ou expirada.' });
         }
-        res.status(500).json({ error: 'Erro ao processar solicitação de IA' });
+        
+        if (err.message?.includes('OPENAI_API_KEY')) {
+            return res.status(503).json({ error: 'Serviço de IA indisponível: chave de API não configurada no servidor.' });
+        }
+
+        if (err.status === 429) {
+            return res.status(429).json({ error: 'Limite de requisições do OpenAI atingido. Tente novamente em breve.' });
+        }
+
+        res.status(500).json({ error: 'Erro interno ao processar sua solicitação de IA. Detalhe: ' + (err.message || 'erro desconhecido') });
     }
 });
 
