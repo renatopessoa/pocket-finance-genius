@@ -98,12 +98,17 @@ async function ensurePasswordHashColumn() {
 
 // ── Init ──
 pool.connect()
-    .then(async () => {
-        console.log('Conectado ao PostgreSQL com sucesso!');
+    .then(async (client) => {
+        client.release();
+        console.log('Conexão com o PostgreSQL estabelecida com sucesso!');
         await ensurePasswordHashColumn();
         await seedCategories();
     })
-    .catch(err => console.error('Erro ao conectar ao PostgreSQL:', err));
+    .catch(err => {
+        console.error('AVISO: Não foi possível conectar ao PostgreSQL inicialmente:', err.message);
+        console.error('O servidor continuará rodando, mas as rotas de banco falharão até que a conexão seja estabelecida.');
+    });
+
 
 // ── SPA catch-all: qualquer rota que não seja /api cai no index.html ──
 app.get('{*path}', (req, res) => {
