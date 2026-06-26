@@ -8,7 +8,7 @@ if (!process.env.DATABASE_URL) {
 
 // Em ambientes de VPS comum, o SSL geralmente não é suportado por padrão.
 // Forçamos false se a variável DATABASE_SSL for 'false'.
-const useSSL = process.env.DATABASE_SSL === 'false' ? false : { rejectUnauthorized: false };
+const useSSL = String(process.env.DATABASE_SSL).trim().toLowerCase() === 'false' ? false : { rejectUnauthorized: false };
 
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
