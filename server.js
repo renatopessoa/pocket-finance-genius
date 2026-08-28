@@ -4,6 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
+import logger from './server/lib/logger.js';
 
 import pool from './server/db.js';
 
@@ -49,12 +50,13 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeade
 app.use('/api', globalLimiter);
 app.use('/api/auth', authLimiter);
 
-// ── Request logging (leve, sem lib extra) ──
+// ── Request logging estruturado ──
 app.use((req, res, next) => {
     const start = Date.now();
     res.on('finish', () => {
         const ms = Date.now() - start;
-        console.log(`${req.method} ${req.originalUrl} → ${res.statusCode} (${ms}ms)`);
+        const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+        logger[level](`${req.method} ${req.originalUrl}`, { status: res.statusCode, ms });
     });
     next();
 });
@@ -114,13 +116,21 @@ async function ensurePasswordHashColumn() {
 pool.connect()
     .then(async (client) => {
         client.release();
-        console.log('Conexão com o PostgreSQL estabelecida com sucesso!');
+        logger.info('Conexão com o PostgreSQL estabelecida');
+
+        // ── Aviso de segurança: SSL desativado em produção ────────────────
+        if (process.env.NODE_ENV === 'production' &&
+            String(process.env.DATABASE_SSL).trim().toLowerCase() === 'false') {
+            logger.warn('DATABASE_SSL=false em produção — conexão com o banco NÃO está criptografada. ' +
+                'Defina DATABASE_SSL=true se o banco estiver em host remoto.');
+        }
+
         await ensurePasswordHashColumn();
         await seedCategories();
     })
     .catch(err => {
-        console.error('AVISO: Não foi possível conectar ao PostgreSQL inicialmente:', err.message);
-        console.error('O servidor continuará rodando, mas as rotas de banco falharão até que a conexão seja estabelecida.');
+        logger.error('Não foi possível conectar ao PostgreSQL', err);
+        logger.warn('O servidor continuará rodando, mas as rotas de banco falharão.');
     });
 
 
@@ -130,5 +140,5 @@ app.get('{*path}', (req, res) => {
 });
 
 app.listen(port, '0.0.0.0', () => {
-    console.log(`Servidor rodando em http://0.0.0.0:${port}`);
+    logger.info(`Servidor rodando na porta ${port}`, { port, env: process.env.NODE_ENV || 'development' });
 });

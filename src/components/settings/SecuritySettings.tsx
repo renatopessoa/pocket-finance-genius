@@ -4,61 +4,84 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Eye, EyeOff, Shield, Smartphone, Save } from 'lucide-react';
+import { Eye, EyeOff, Shield, Loader2, CheckCircle2, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+function getAuthHeaders(): Record<string, string> {
+  const token = localStorage.getItem('pfg_token');
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
+}
 
 export function SecuritySettings() {
   const [showPassword, setShowPassword] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [passwords, setPasswords] = useState({
     current: '',
     new: '',
-    confirm: ''
+    confirm: '',
   });
 
   const { toast } = useToast();
 
   const handlePasswordChange = (field: string, value: string) => {
-    setPasswords(prev => ({ ...prev, [field]: value }));
+    setPasswords((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
+    // Validações no frontend antes de chamar a API
+    if (!passwords.current || !passwords.new || !passwords.confirm) {
+      toast({ title: 'Campos obrigatórios', description: 'Preencha todos os campos de senha.', variant: 'destructive' });
+      return;
+    }
+    if (passwords.new.length < 8) {
+      toast({ title: 'Senha fraca', description: 'A nova senha deve ter ao menos 8 caracteres.', variant: 'destructive' });
+      return;
+    }
     if (passwords.new !== passwords.confirm) {
-      toast({
-        title: "Erro",
-        description: "As senhas não coincidem.",
-        variant: "destructive"
-      });
+      toast({ title: 'Senhas não coincidem', description: 'A confirmação de senha não bate com a nova senha.', variant: 'destructive' });
       return;
     }
 
-    toast({
-      title: "Senha alterada",
-      description: "Sua senha foi atualizada com sucesso."
-    });
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/users/me/password`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          current_password: passwords.current,
+          new_password: passwords.new,
+        }),
+      });
 
-    setPasswords({ current: '', new: '', confirm: '' });
-  };
+      const data = await res.json();
 
-  const handleTwoFactorToggle = (enabled: boolean) => {
-    setTwoFactorEnabled(enabled);
-    toast({
-      title: enabled ? "2FA Ativado" : "2FA Desativado",
-      description: enabled 
-        ? "Autenticação de dois fatores foi ativada." 
-        : "Autenticação de dois fatores foi desativada."
-    });
+      if (!res.ok) {
+        toast({ title: 'Erro ao alterar senha', description: data.error || 'Tente novamente.', variant: 'destructive' });
+        return;
+      }
+
+      toast({ title: 'Senha alterada ✓', description: 'Sua senha foi atualizada com sucesso.' });
+      setPasswords({ current: '', new: '', confirm: '' });
+    } catch {
+      toast({ title: 'Erro de rede', description: 'Não foi possível conectar ao servidor.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="space-y-6">
+      {/* ── Alterar Senha ── */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Alterar Senha</CardTitle>
-          <CardDescription>Mantenha sua conta segura com uma senha forte</CardDescription>
+          <CardDescription>Mantenha sua conta segura com uma senha forte (mínimo 8 caracteres)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -66,9 +89,10 @@ export function SecuritySettings() {
             <div className="relative">
               <Input
                 id="currentPassword"
-                type={showPassword ? "text" : "password"}
+                type={showPassword ? 'text' : 'password'}
                 value={passwords.current}
                 onChange={(e) => handlePasswordChange('current', e.target.value)}
+                disabled={isLoading}
               />
               <Button
                 type="button"
@@ -86,9 +110,10 @@ export function SecuritySettings() {
             <Label htmlFor="newPassword">Nova Senha</Label>
             <Input
               id="newPassword"
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               value={passwords.new}
               onChange={(e) => handlePasswordChange('new', e.target.value)}
+              disabled={isLoading}
             />
           </div>
 
@@ -96,102 +121,62 @@ export function SecuritySettings() {
             <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
             <Input
               id="confirmPassword"
-              type={showPassword ? "text" : "password"}
+              type={showPassword ? 'text' : 'password'}
               value={passwords.confirm}
               onChange={(e) => handlePasswordChange('confirm', e.target.value)}
+              disabled={isLoading}
             />
           </div>
 
-          <Button onClick={handleChangePassword} className="w-full md:w-auto">
-            <Save className="mr-2 h-4 w-4" />
-            Alterar Senha
+          <Button onClick={handleChangePassword} className="w-full md:w-auto" disabled={isLoading}>
+            {isLoading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Alterando...</>
+            ) : (
+              <><CheckCircle2 className="mr-2 h-4 w-4" />Alterar Senha</>
+            )}
           </Button>
         </CardContent>
       </Card>
 
-      <Card>
+      {/* ── 2FA — Em desenvolvimento ── */}
+      <Card className="opacity-70">
         <CardHeader>
-          <CardTitle className="text-lg">Autenticação de Dois Fatores</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Autenticação de Dois Fatores</CardTitle>
+            <Badge variant="secondary" className="gap-1">
+              <Clock className="h-3 w-3" />Em breve
+            </Badge>
+          </div>
           <CardDescription>Adicione uma camada extra de segurança à sua conta</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <Label>Ativar 2FA</Label>
-              </div>
-              <p className="text-sm text-gray-500">
-                Use um aplicativo autenticador para gerar códigos de segurança
-              </p>
-            </div>
-            <Switch
-              checked={twoFactorEnabled}
-              onCheckedChange={handleTwoFactorToggle}
-            />
-          </div>
-
-          {twoFactorEnabled && (
-            <Alert>
-              <Smartphone className="h-4 w-4" />
-              <AlertDescription>
-                Configure seu aplicativo autenticador escaneando o QR code que será enviado por email.
-              </AlertDescription>
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Autenticação Biométrica</CardTitle>
-          <CardDescription>Use impressão digital ou reconhecimento facial quando disponível</CardDescription>
-        </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label>Ativar Biometria</Label>
-              <p className="text-sm text-gray-500">
-                Login rápido e seguro usando dados biométricos
-              </p>
-            </div>
-            <Switch
-              checked={biometricEnabled}
-              onCheckedChange={setBiometricEnabled}
-            />
-          </div>
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              A autenticação de dois fatores (2FA) estará disponível em uma próxima versão.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
 
-      <Card>
+      {/* ── Sessões Ativas — Em desenvolvimento ── */}
+      <Card className="opacity-70">
         <CardHeader>
-          <CardTitle className="text-lg">Sessões Ativas</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Sessões Ativas</CardTitle>
+            <Badge variant="secondary" className="gap-1">
+              <Clock className="h-3 w-3" />Em breve
+            </Badge>
+          </div>
           <CardDescription>Gerencie dispositivos conectados à sua conta</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div>
-              <p className="font-medium">Navegador Atual</p>
-              <p className="text-sm text-gray-500">Chrome • São Paulo, SP • Agora</p>
-            </div>
-            <Button variant="outline" size="sm">
-              Atual
-            </Button>
-          </div>
-          
-          <div className="flex items-center justify-between p-3 border rounded-lg">
-            <div>
-              <p className="font-medium">iPhone</p>
-              <p className="text-sm text-gray-500">Safari • Rio de Janeiro, RJ • 2 horas atrás</p>
-            </div>
-            <Button variant="outline" size="sm">
-              Revogar
-            </Button>
-          </div>
-
-          <Button variant="destructive" className="w-full">
-            Desconectar Todos os Dispositivos
-          </Button>
+        <CardContent>
+          <Alert>
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              O gerenciamento de sessões e revogação de dispositivos estará disponível em breve.
+            </AlertDescription>
+          </Alert>
         </CardContent>
       </Card>
     </div>

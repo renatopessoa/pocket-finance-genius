@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import pool from '../db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { validate, schemas } from '../lib/validate.js';
+import logger from '../lib/logger.js';
 
 const router = Router();
 router.use(authenticateToken);
@@ -18,14 +20,14 @@ router.get('/', async (req, res) => {
         );
         res.json(result.rows);
     } catch (err) {
-        console.error(err);
+        logger.error('GET /transactions falhou', err);
         res.status(500).json({ error: 'Erro ao buscar transações' });
     }
 });
 
 // Suporta um objeto ou um array (parcelas)
 // Ao criar, atualiza o saldo da conta (income = +, expense = -)
-router.post('/', async (req, res) => {
+router.post('/', validate(schemas.transaction), async (req, res) => {
     const items = Array.isArray(req.body) ? req.body : [req.body];
     const client = await pool.connect();
     try {
@@ -51,7 +53,7 @@ router.post('/', async (req, res) => {
         res.status(201).json(Array.isArray(req.body) ? results : results[0]);
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error(err);
+        logger.error('POST /transactions falhou', err);
         res.status(500).json({ error: 'Erro ao criar transação' });
     } finally {
         client.release();
@@ -88,7 +90,7 @@ router.put('/:id', async (req, res) => {
         res.json(result.rows[0]);
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error(err);
+        logger.error('PUT /transactions/:id falhou', err);
         res.status(500).json({ error: 'Erro ao atualizar transação' });
     } finally {
         client.release();
@@ -114,7 +116,7 @@ router.delete('/:id', async (req, res) => {
         res.status(204).send();
     } catch (err) {
         await client.query('ROLLBACK');
-        console.error(err);
+        logger.error('DELETE /transactions/:id falhou', err);
         res.status(500).json({ error: 'Erro ao excluir transação' });
     } finally {
         client.release();

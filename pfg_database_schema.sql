@@ -103,3 +103,25 @@ CREATE INDEX IF NOT EXISTS idx_pfg_transactions_date ON pfg_transactions(date);
 CREATE INDEX IF NOT EXISTS idx_pfg_accounts_user_id ON pfg_accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_pfg_budgets_user_id ON pfg_budgets(user_id);
 CREATE INDEX IF NOT EXISTS idx_pfg_goals_user_id ON pfg_goals(user_id);
+
+-- 9. TABELA BILLS (contas a pagar)
+CREATE TABLE IF NOT EXISTS pfg_bills (
+    id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id      UUID NOT NULL REFERENCES pfg_users(id) ON DELETE CASCADE,
+    title        VARCHAR(255) NOT NULL,
+    description  TEXT,
+    amount       DECIMAL(15, 2) NOT NULL,
+    due_date     DATE NOT NULL,
+    status       VARCHAR(20) NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'paid', 'overdue')),
+    recurring    BOOLEAN NOT NULL DEFAULT FALSE,
+    recurrence   VARCHAR(20) CHECK (recurrence IN ('monthly', 'weekly', 'yearly')),
+    paid_at      TIMESTAMP WITH TIME ZONE,
+    category_id  UUID REFERENCES pfg_categories(id) ON DELETE SET NULL,
+    account_id   UUID REFERENCES pfg_accounts(id) ON DELETE SET NULL,
+    created_at   TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pfg_bills_user_id  ON pfg_bills(user_id);
+CREATE INDEX IF NOT EXISTS idx_pfg_bills_due_date ON pfg_bills(due_date);
+CREATE INDEX IF NOT EXISTS idx_pfg_bills_status   ON pfg_bills(status);
