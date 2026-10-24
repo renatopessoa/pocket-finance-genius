@@ -346,6 +346,83 @@ export const useAlerts = () =>
         staleTime: 2 * 60 * 1000,
     });
 
+// ─── PLUGGY (Open Banking) ────────────────────────────────────────────────────
+
+export const usePluggyItems = () =>
+    useQuery({
+        queryKey: ['pluggy-items'],
+        queryFn: async () => {
+            const res = await fetch(`${API_URL}/pluggy/items`, { headers: getAuthHeaders() });
+            if (!res.ok) throw new Error('Erro ao buscar conexões bancárias');
+            return res.json();
+        },
+    });
+
+export const useCreatePluggyConnectToken = () =>
+    useMutation({
+        mutationFn: async (itemId?: string) => {
+            const res = await fetch(`${API_URL}/pluggy/connect-token`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(itemId ? { itemId } : {}),
+            });
+            if (!res.ok) throw new Error('Erro ao gerar token Pluggy');
+            return res.json() as Promise<{ accessToken: string }>;
+        },
+    });
+
+export const useSavePluggyItem = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (itemId: string) => {
+            const res = await fetch(`${API_URL}/pluggy/items`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify({ itemId }),
+            });
+            if (!res.ok) throw new Error('Erro ao salvar conexão bancária');
+            return res.json();
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['pluggy-items'] }),
+    });
+};
+
+export const useSyncPluggyItem = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (itemId: string) => {
+            const res = await fetch(`${API_URL}/pluggy/sync/${itemId}`, {
+                method: 'POST',
+                headers: getAuthHeaders(),
+            });
+            if (!res.ok) throw new Error('Erro ao sincronizar dados bancários');
+            return res.json();
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['accounts'] });
+            qc.invalidateQueries({ queryKey: ['transactions'] });
+            qc.invalidateQueries({ queryKey: ['pluggy-items'] });
+        },
+    });
+};
+
+export const useDeletePluggyItem = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: async (itemId: string) => {
+            const res = await fetch(`${API_URL}/pluggy/items/${itemId}`, {
+                method: 'DELETE',
+                headers: getAuthHeaders(),
+            });
+            if (!res.ok) throw new Error('Erro ao remover conexão bancária');
+        },
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: ['pluggy-items'] });
+            qc.invalidateQueries({ queryKey: ['accounts'] });
+        },
+    });
+};
+
 /* ── EDUCATIONAL CONTENT ── */
 const toEducationalContent = (row: any) => ({
     id: row.id as string,

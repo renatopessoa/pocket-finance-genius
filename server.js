@@ -19,6 +19,7 @@ import educationalRoutes from './server/routes/educational.js';
 import aiRoutes from './server/routes/ai.js';
 import billsRoutes from './server/routes/bills.js';
 import alertsRoutes from './server/routes/alerts.js';
+import pluggyRoutes from './server/routes/pluggy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -75,6 +76,7 @@ app.use('/api/educational-content', educationalRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/bills', billsRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/pluggy', pluggyRoutes);
 
 // ── Seed: categorias padrão ──
 async function seedCategories() {
@@ -112,6 +114,28 @@ async function ensurePasswordHashColumn() {
     `);
 }
 
+// ── Pluggy: tabelas e colunas necessárias ──
+async function ensurePluggySchema() {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS pfg_pluggy_items (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            item_id TEXT UNIQUE NOT NULL,
+            user_id UUID NOT NULL REFERENCES pfg_users(id) ON DELETE CASCADE,
+            connector_name TEXT,
+            connector_id INTEGER,
+            status TEXT DEFAULT 'CREATING',
+            created_at TIMESTAMPTZ DEFAULT NOW(),
+            updated_at TIMESTAMPTZ DEFAULT NOW()
+        );
+    `);
+    // Colunas extras nas contas para vincular ao Pluggy
+    await pool.query(`ALTER TABLE pfg_accounts ADD COLUMN IF NOT EXISTS pluggy_account_id TEXT UNIQUE;`);
+    await pool.query(`ALTER TABLE pfg_accounts ADD COLUMN IF NOT EXISTS pluggy_item_id TEXT;`);
+    await pool.query(`ALTER TABLE pfg_accounts ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`);
+    // Coluna extra nas transações para de-duplicar
+    await pool.query(`ALTER TABLE pfg_transactions ADD COLUMN IF NOT EXISTS pluggy_transaction_id TEXT UNIQUE;`);
+}
+
 // ── Init ──
 pool.connect()
     .then(async (client) => {
@@ -126,6 +150,7 @@ pool.connect()
         }
 
         await ensurePasswordHashColumn();
+        await ensurePluggySchema();
         await seedCategories();
     })
     .catch(err => {

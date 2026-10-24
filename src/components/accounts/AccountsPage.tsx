@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, CreditCard, Wallet, PiggyBank, Building, ArrowRightLeft, Edit, Trash2 } from 'lucide-react';
 import { AccountForm } from './AccountForm';
 import { TransferForm } from './TransferForm';
+import { PluggyConnect } from './PluggyConnect';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import {
   useAccounts, useTransactions,
@@ -115,6 +116,9 @@ export function AccountsPage() {
           </Dialog>
         </div>
       </div>
+
+      {/* Pluggy Open Banking */}
+      <PluggyConnect />
 
       {/* Resumo Total */}
       <Card>
