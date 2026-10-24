@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /c/Users/rpess/Documents/DevOPS/pocket-finance-genius -type f -name README* -o -name *.md)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npm install:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx vite:*)"
+    ]
+  }
+}
