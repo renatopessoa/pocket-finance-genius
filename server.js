@@ -33,15 +33,22 @@ const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
     .map((s) => s.trim())
     .filter(Boolean);
 
-app.use(cors({
-    origin: (origin, callback) => {
-        // Permite requisições sem origin (ex: mesmo host, curl, Postman)
-        if (!origin || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-        callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
-    },
-    credentials: true,
+const isSameOrigin = (req, origin) => {
+    try {
+        return new URL(origin).host === req.get('host');
+    } catch {
+        return false;
+    }
+};
+
+app.use(cors((req, callback) => {
+    const origin = req.get('origin');
+    // Permite requisições sem origin (curl, Postman) e do próprio host
+    // (o Vite usa <script type="module" crossorigin>, que envia Origin mesmo no mesmo domínio)
+    if (!origin || isSameOrigin(req, origin) || allowedOrigins.includes(origin)) {
+        return callback(null, { origin: true, credentials: true });
+    }
+    callback(new Error(`Origem não permitida pelo CORS: ${origin}`));
 }));
 app.use(express.json());
 
