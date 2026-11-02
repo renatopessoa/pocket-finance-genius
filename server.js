@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import rateLimit from 'express-rate-limit';
@@ -26,6 +27,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const port = process.env.PORT || 3001;
+
+// Atrás do proxy do Coolify/Traefik: usa o IP real do cliente (X-Forwarded-For) no rate limit
+app.set('trust proxy', 1);
 
 // ── Middleware ──
 const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
@@ -114,6 +118,12 @@ async function seedCategories() {
     console.log(`Seed: ${cats.length} categorias inseridas.`);
 }
 
+// ── Schema base (idempotente: CREATE ... IF NOT EXISTS) ──
+async function ensureBaseSchema() {
+    const schemaSql = fs.readFileSync(path.join(__dirname, 'pfg_database_schema.sql'), 'utf8');
+    await pool.query(schemaSql);
+}
+
 // ── Ensure password_hash column exists ──
 async function ensurePasswordHashColumn() {
     await pool.query(`
@@ -156,6 +166,7 @@ pool.connect()
                 'Defina DATABASE_SSL=true se o banco estiver em host remoto.');
         }
 
+        await ensureBaseSchema();
         await ensurePasswordHashColumn();
         await ensurePluggySchema();
         await seedCategories();
